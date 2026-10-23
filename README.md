@@ -45,11 +45,11 @@ de C e assembly, comentadas em português.
 
 | | |
 |:-:|:-:|
-| <img src="docs/img/telas/bloqueio.png" alt="Tela de bloqueio com data, hora e a capivara à beira do rio" width="100%"> | <img src="docs/img/telas/area-de-trabalho.png" alt="Área de trabalho com o Bloco de Notas aberto e uma notificação de boas-vindas" width="100%"> |
+| <img src="docs/img/telas/bloqueio.png" alt="Tela de bloqueio com data, hora e a capivara à beira do rio" width="100%"> | <img src="docs/img/telas/area-de-trabalho.png" alt="Área de trabalho com barra de menus globais, Dock e notificações" width="100%"> |
 | **Tela de bloqueio**: relógio, senha opcional | **Área de trabalho**: barra de menus global, Dock e notificações |
-| <img src="docs/img/telas/aplicativos.png" alt="Explorador e Terminal lado a lado, com a Calculadora por cima" width="100%"> | <img src="docs/img/telas/launchpad.png" alt="Launchpad com os ícones de todos os aplicativos" width="100%"> |
+| <img src="docs/img/telas/aplicativos.png" alt="Explorador e Terminal lado a lado, com a Calculadora por cima" width="100%"> | <img src="docs/img/telas/launchpad.png" alt="Launchpad com os ícones dos aplicativos" width="100%"> |
 | **Aplicativos** encaixados lado a lado (Super+setas) | **Launchpad** (tecla Super) |
-| <img src="docs/img/telas/mission-control.png" alt="Mission Control mostrando miniaturas das janelas e as áreas de trabalho" width="100%"> | <img src="docs/img/telas/modo-escuro.png" alt="Os mesmos aplicativos no tema escuro" width="100%"> |
+| <img src="docs/img/telas/mission-control.png" alt="Mission Control mostrando miniaturas das janelas e as áreas de trabalho" width="100%"> | <img src="docs/img/telas/modo-escuro.png" alt="Tema escuro com interface visual" width="100%"> |
 | **Mission Control** e áreas de trabalho virtuais | **Tema escuro** (`tema escuro` no Terminal) |
 
 ## 🧰 Aplicativos
@@ -206,6 +206,10 @@ Por onde começar a ler o código, e como as peças se encaixam, está em
   `kernel/gui/font/unifont-subset.hex`.
 - **GRUB, GCC e binutils** são usados como ferramentas; nada do código deles é
   incorporado ao kernel.
+
+## 📄 Licença
+
+Este projeto está licenciado sob a [MIT License](LICENSE).
 
 <div align="center">
 <br>
