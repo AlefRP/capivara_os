@@ -1,5 +1,6 @@
 /* Configurações: personalização, informações do sistema, data e hora, sobre. */
 #include "apps/apps.h"
+#include "version.h"
 #include "gui/ui.h"
 #include "dev/rtc.h"
 #include "dev/keyboard.h"
@@ -279,7 +280,7 @@ static void draw_about(st_t *s, canvas_t *c, int x0, int y) {
     card(c, x0, y, w, 120);
     icon_draw(c, ICON_LOGO, x0 + 20, y + 20, 80);
     font_draw(c, x0 + 120, y + 26, "Capivara OS", theme.text, FONT_2X | FONT_BOLD);
-    font_draw(c, x0 + 120, y + 66, "Versão 0.1 · fase 1 (kernel + interface gráfica)", theme.text_dim, 0);
+    font_draw(c, x0 + 120, y + 66, "Versão " CAPIVARA_VERSION " · fase 1 (kernel + interface gráfica)", theme.text_dim, 0);
     font_draw(c, x0 + 120, y + 86, "x86_64 · kernel monolítico próprio", theme.text_dim, 0);
     y += 136;
     card(c, x0, y, w, 290);

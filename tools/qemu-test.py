@@ -10,6 +10,8 @@ Uso:  python3 tools/qemu-test.py ROTEIRO [--iso build/capivara.iso] [--out build
 
 Comandos do roteiro (um por linha):
     sleep 2.5            espera (segundos)
+    waitlog TEXTO [S]    espera TEXTO aparecer na serial (padrão: 120 s); falha se não vier
+    (o roteiro falha, com código de saída 1, se o kernel entrar em pânico)
     shot nome            salva build/test/nome.png
     move X Y             move o mouse (coordenadas da tela 1024x768)
     click X Y [right]    clica
@@ -99,6 +101,37 @@ def uefi_firmware():
     return ["-bios", path]
 
 
+def read_log(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+
+
+# Mensagens que o kernel escreve na serial quando morre (panic.c)
+PANIC_MARKS = ("*** PANIC", "*** EXCEÇÃO")
+
+
+def check_panic(path):
+    log = read_log(path)
+    for mark in PANIC_MARKS:
+        i = log.find(mark)
+        if i >= 0:
+            sys.exit("FALHOU: erro do kernel na serial:\n" + log[i:i + 600])
+
+
+def wait_log(path, text, timeout):
+    """Espera o texto aparecer na saída serial (ex.: 'kmain: pronto')."""
+    end = time.time() + timeout
+    while time.time() < end:
+        check_panic(path)
+        if text in read_log(path):
+            return
+        time.sleep(0.5)
+    sys.exit("FALHOU: '%s' não apareceu na serial em %.0f s" % (text, timeout))
+
+
 def main():
     script = sys.argv[1]
     iso = "build/capivara.iso"
@@ -126,6 +159,7 @@ def main():
         "-no-reboot"])
     try:
         q = QMP(sock)
+        serial = os.path.join(out, "serial.log")
         for raw in open(script, encoding="utf-8"):
             line = raw.strip()
             if not line or line.startswith("#"):
@@ -134,6 +168,9 @@ def main():
             print(">>", line, flush=True)
             if op == "sleep":
                 time.sleep(float(a[0]))
+            elif op == "waitlog":
+                timeout = float(a.pop()) if len(a) > 1 and a[-1].replace(".", "").isdigit() else 120
+                wait_log(serial, " ".join(a), timeout)
             elif op == "shot":
                 ppm = "/tmp/shot.ppm"
                 q.hmp("screendump " + ppm)
@@ -183,12 +220,14 @@ def main():
                     q.button(b, False)
                     time.sleep(0.05)
             time.sleep(0.2)
+            check_panic(serial)
         q.cmd("quit")
     finally:
         try:
             qemu.wait(timeout=5)
         except subprocess.TimeoutExpired:
             qemu.kill()
+    print("OK: roteiro concluído sem erro do kernel")
 
 
 if __name__ == "__main__":

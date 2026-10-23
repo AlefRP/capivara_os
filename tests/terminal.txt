@@ -1,5 +1,6 @@
 # Terminal: arquivos, abrir aplicativo, ps/kill e tree.
-sleep 14
+waitlog kmain: pronto
+sleep 4
 key ret
 sleep 3
 key alt-f4

@@ -1,6 +1,7 @@
 # Recursos estilo Windows/macOS: layouts de encaixe, Central de Controle, notificações,
 # pesquisa, Mission Control e menus de aplicativo na barra do topo.
-sleep 14
+waitlog kmain: pronto
+sleep 4
 key ret
 sleep 3
 # parar o mouse no botão verde do Bloco de Notas -> layouts

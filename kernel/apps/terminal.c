@@ -3,6 +3,7 @@
  * (no estilo dos shells Unix) que opera sobre o sistema de arquivos virtual.
  */
 #include "apps/apps.h"
+#include "version.h"
 #include "gui/ui.h"
 #include "fs/vfs.h"
 #include "dev/rtc.h"
@@ -268,7 +269,7 @@ static void cmd_sysinfo(term_t *t) {
     task_info_t tl[64];
     snprintf(info[0], 96, "usuario@capivara");
     snprintf(info[1], 96, "----------------");
-    snprintf(info[2], 96, "Sistema: Capivara OS 0.1 (x86_64)");
+    snprintf(info[2], 96, "Sistema: Capivara OS " CAPIVARA_VERSION " (x86_64)");
     snprintf(info[3], 96, "Kernel: capivara (próprio, monolítico)");
     snprintf(info[4], 96, "Tempo ligado: %luh %lum %lus", up / 3600, (up / 60) % 60, up % 60);
     snprintf(info[5], 96, "CPU: %s", cpu_brand());
@@ -508,7 +509,7 @@ static void run(term_t *t, char *line) {
         uint64_t s = timer_ms() / 1000;
         print(t, "ligado há %lu h %lu min %lu s\n", s / 3600, (s / 60) % 60, s % 60);
     }
-    else if (!strcmp(cmd, "uname")) print(t, argc > 1 ? "Capivara 0.1 x86_64 (kernel próprio, compilado com GCC)\n" : "Capivara\n");
+    else if (!strcmp(cmd, "uname")) print(t, argc > 1 ? "Capivara " CAPIVARA_VERSION " x86_64 (kernel próprio, compilado com GCC)\n" : "Capivara\n");
     else if (!strcmp(cmd, "teclado")) {
         if (argc > 1 && !strcasecmp(argv[1], "us")) keyboard_set_layout(KB_LAYOUT_US);
         else if (argc > 1 && !strcasecmp(argv[1], "abnt2")) keyboard_set_layout(KB_LAYOUT_ABNT2);

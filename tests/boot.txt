@@ -1,6 +1,7 @@
 # Boot até a área de trabalho. Útil com --usb e --uefi (boot como pendrive):
 #   sh build.sh test tests/boot.txt --usb --uefi
-sleep 25
+waitlog kmain: pronto
+sleep 4
 shot boot
 key ret
 sleep 4

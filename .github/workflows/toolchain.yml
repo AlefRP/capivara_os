@@ -1,0 +1,47 @@
+# Testa o caminho "container" do build: reconstrói a imagem de ferramentas
+# (GCC cruzado x86_64-elf, GRUB, QEMU) a partir do Dockerfile e compila e dá
+# boot com ela, exatamente como o build.sh faz no Windows e no macOS.
+#
+# Compilar o GCC leva uns 15 minutos, então isso só roda quando docker/ ou o
+# build.sh mudam, uma vez por mês (para pegar mudanças nos espelhos GNU e na
+# imagem do Ubuntu) ou quando alguém pede.
+name: Ferramentas (container)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker/**
+      - build.sh
+      - .github/workflows/toolchain.yml
+  pull_request:
+    paths:
+      - docker/**
+      - build.sh
+      - .github/workflows/toolchain.yml
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Constrói a imagem de ferramentas
+        run: sh build.sh toolchain
+      - name: Compila a ISO no container
+        run: MODO=container sh build.sh
+      - name: Dá boot como pendrive UEFI, no container
+        run: MODO=container sh build.sh test tests/boot.txt --usb --uefi --out build/test/container
+      - name: Guarda as capturas
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: telas-container
+          path: build/test/
+          if-no-files-found: ignore

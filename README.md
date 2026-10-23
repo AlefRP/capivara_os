@@ -5,6 +5,7 @@
 **Um sistema operacional de 64 bits escrito do zero, para aprender como um computador funciona por dentro.**<br>
 Com o nome do maior roedor do mundo, bicho bem brasileiro. 🍊
 
+[![CI](https://github.com/AlefRP/capivara_os/actions/workflows/ci.yml/badge.svg)](https://github.com/AlefRP/capivara_os/actions/workflows/ci.yml)
 ![Linguagem](https://img.shields.io/badge/linguagem-C%20%2B%20assembly-A97A50?style=flat-square)
 ![Arquitetura](https://img.shields.io/badge/arquitetura-x86__64-86603F?style=flat-square)
 ![Kernel](https://img.shields.io/badge/kernel-pr%C3%B3prio-E98A2E?style=flat-square)
@@ -173,6 +174,18 @@ Por onde começar a ler o código, e como as peças se encaixam, está em
 | 💾 [Pendrive bootável](docs/pendrive.md) | gravar, dar boot e o que esperar em hardware real |
 | 🧼 [Clean room](docs/clean-room.md) | como o sistema foi feito sem copiar código de ninguém |
 | 📐 [Especificações](docs/spec/) | boot e memória, interrupções e tarefas, interface gráfica |
+
+## 🤖 Testes automáticos e Claude Code
+
+- **GitHub Actions:** a cada push, a ISO é compilada em Ubuntu, Fedora e Arch.
+  Depois, ela dá boot no QEMU como CD e como pendrive, por BIOS e por UEFI, e os
+  roteiros da interface rodam sozinhos. As capturas de tela ficam nos
+  artefatos de cada execução. Uma tag `vX.Y.Z` publica a ISO pronta numa
+  [Release](https://github.com/AlefRP/capivara_os/releases).
+- **Claude Code:** o [CLAUDE.md](CLAUDE.md) traz as regras do projeto (clean
+  room, sem libc, sem float no núcleo...). Em [.claude/](.claude/) há o
+  agente `testador-qemu`, que testa e olha as telas, e as skills
+  `testar-no-qemu`, `novo-aplicativo`, `desenhar-icone` e `publicar-versao`.
 
 <a id="roteiro"></a>
 

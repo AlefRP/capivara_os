@@ -1,6 +1,7 @@
 # Capturas de tela da documentação (docs/img/telas). Para gerar de novo:
 #   sh build.sh test tests/readme.txt --out docs/img/telas
-sleep 16
+waitlog kmain: pronto
+sleep 4
 shot bloqueio
 key ret
 sleep 3

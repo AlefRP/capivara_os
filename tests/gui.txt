@@ -1,5 +1,6 @@
 # Roteiro de teste automático (tools/qemu-test.py). Screenshots vão para build/test/.
-sleep 14
+waitlog kmain: pronto
+sleep 4
 shot 01-tela-de-bloqueio
 key ret
 sleep 3

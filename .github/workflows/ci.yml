@@ -1,0 +1,123 @@
+# Integração contínua do Capivara OS.
+#
+#   build      compila a ISO com as ferramentas NATIVAS de três distribuições
+#              (prova que o build não depende de um sistema só; docs/compilar.md)
+#   boot       dá boot da ISO no QEMU nos 4 modos: CD ou pendrive × BIOS ou UEFI
+#   interface  roda os roteiros da interface gráfica e guarda as capturas
+#
+# Os testes falham sozinhos se o kernel entrar em pânico (tools/qemu-test.py).
+# As capturas de tela ficam nos artefatos de cada execução.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build (${{ matrix.distro }})
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.imagem }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            imagem: ubuntu:24.04
+            pacotes: >-
+              apt-get update &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
+              gcc make python3 grub-common grub-pc-bin grub-efi-amd64-bin xorriso mtools
+          - distro: fedora
+            imagem: fedora:41
+            pacotes: >-
+              dnf install -y gcc make python3 findutils grub2-tools grub2-tools-extra
+              grub2-pc-modules grub2-efi-x64-modules xorriso mtools
+          - distro: arch
+            imagem: archlinux:latest
+            pacotes: pacman -Syu --noconfirm --needed gcc make python grub libisoburn mtools
+    steps:
+      - uses: actions/checkout@v7
+      - name: Instala as ferramentas GNU
+        run: ${{ matrix.pacotes }}
+      - name: Ferramentas encontradas
+        run: sh build.sh doctor
+      - name: Compila a ISO
+        run: MODO=nativo sh build.sh
+      - name: Guarda a ISO
+        if: matrix.distro == 'ubuntu'
+        uses: actions/upload-artifact@v7
+        with:
+          name: capivara-iso
+          path: build/capivara.iso
+          if-no-files-found: error
+
+  boot:
+    name: boot (${{ matrix.modo }})
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - modo: cd-bios
+            flags: ""
+          - modo: cd-uefi
+            flags: --uefi
+          - modo: pendrive-bios
+            flags: --usb
+          - modo: pendrive-uefi
+            flags: --usb --uefi
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: capivara-iso
+          path: build
+      - name: Instala QEMU, OVMF e ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf imagemagick
+      - name: Dá boot até a área de trabalho
+        run: python3 tools/qemu-test.py tests/boot.txt --out build/test/${{ matrix.modo }} ${{ matrix.flags }}
+      - name: Guarda as capturas
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: telas-boot-${{ matrix.modo }}
+          path: build/test/
+          if-no-files-found: ignore
+
+  interface:
+    name: interface gráfica
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: capivara-iso
+          path: build
+      - name: Instala QEMU e ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86 imagemagick
+      - name: Roteiros de teste
+        run: |
+          for roteiro in gui recursos terminal; do
+            echo "::group::tests/$roteiro.txt"
+            python3 tools/qemu-test.py tests/$roteiro.txt --out build/test/$roteiro
+            echo "::endgroup::"
+          done
+      - name: Guarda as capturas
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: telas-interface
+          path: build/test/
+          if-no-files-found: ignore

@@ -15,6 +15,7 @@
  * (EV_SHELL).
  */
 #include "apps/apps.h"
+#include "version.h"
 #include "apps/session.h"
 #include "apps/notify.h"
 #include "apps/trash.h"
@@ -1336,7 +1337,7 @@ static void app_menu(int x) {
     int ids[16], n = app_windows(mb_focus_icon, ids, 16);
     if (r == 1) {
         char msg[200];
-        snprintf(msg, sizeof(msg), "%s\n\n%s.\nParte do Capivara OS 0.1.", mb_app, a ? a->description : "Aplicativo");
+        snprintf(msg, sizeof(msg), "%s\n\n%s.\nParte do Capivara OS " CAPIVARA_VERSION ".", mb_app, a ? a->description : "Aplicativo");
         ui_message(NULL, about, msg, "OK", NULL, NULL);
     } else if (r == 2) {
         for (int i = 0; i < n; i++) wm_minimize(ids[i]);

@@ -4,3 +4,7 @@ build/
 # imagens de disco (não versionar; a ISO do Windows não faz parte do projeto)
 *.iso
 *.img
+
+# configurações pessoais do Claude Code (não versionar)
+.claude/settings.local.json
+CLAUDE.local.md
