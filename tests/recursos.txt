@@ -1,0 +1,46 @@
+# Recursos estilo Windows/macOS: layouts de encaixe, Central de Controle, notificações,
+# pesquisa, Mission Control e menus de aplicativo na barra do topo.
+sleep 14
+key ret
+sleep 3
+# parar o mouse no botão verde do Bloco de Notas -> layouts
+move 128 81
+sleep 2
+shot n01-layouts
+move 600 300
+sleep 0.5
+# Central de Controle e Central de Notificações
+click 876 13
+sleep 1.5
+shot n02-controle
+key esc
+sleep 0.5
+click 960 13
+sleep 1.5
+shot n03-notificacoes
+key esc
+sleep 0.5
+# pesquisa
+key meta_l-spc
+sleep 1
+type term
+sleep 1
+shot n04-pesquisa
+key esc
+sleep 0.5
+# explorador e Mission Control
+key meta_l-e
+sleep 2.5
+key meta_l-tab
+sleep 2
+shot n05-mission
+key esc
+sleep 1
+# menu Arquivo do Explorador na barra do topo
+click 170 13
+sleep 1.5
+shot n06-menu-app
+key esc
+sleep 0.5
+key alt-tab
+sleep 1

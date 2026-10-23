@@ -1,0 +1,41 @@
+Bem-vindo ao Capivara OS!
+
+Este é um sistema operacional mínimo, escrito do zero para fins de
+aprendizado. Nada aqui vem do Linux, do Windows ou do macOS: o kernel, os
+drivers, a interface gráfica e os aplicativos são código próprio, compilados
+com as ferramentas GNU (GCC, binutils, Make) e carregados pelo GNU GRUB.
+
+A INTERFACE
+  Barra de menus (topo) ... capivara = menu do sistema; depois o app
+                            com foco e os menus dele; à direita, pesquisa,
+                            Central de Controle e relógio (notificações)
+  Dock (embaixo) .......... apps fixados e abertos; o ponto indica que o
+                            app está aberto; clique direito = mais opções
+  Janelas ................. vermelho fecha, amarelo minimiza, verde amplia;
+                            pare o mouse no verde para escolher um layout
+
+ATALHOS
+  Tecla Windows (Super) .... Launchpad (todos os apps)
+  Super+Espaço ............. Pesquisa
+  Alt+Tab .................. alterna entre apps
+  Alt+F4 ................... fecha a janela ativa
+  Super+Tab ................ Mission Control (áreas de trabalho)
+  Super+Ctrl+setas ......... troca de área de trabalho
+  Super+setas .............. encaixa a janela (metades e quartos)
+  Super+Z .................. layouts de encaixe
+  Super+D / Super+E ........ área de trabalho / Explorador
+  Super+L .................. bloqueia a tela
+  Super+V .................. histórico da área de transferência
+  Super+Shift+S, Print ..... captura de tela
+  Ctrl+Shift+Esc ........... Gerenciador de Tarefas
+
+COMO FUNCIONA
+  - O GRUB carrega o kernel e um arquivo tar (initrd) com estes documentos.
+  - O kernel liga o modo 64 bits, a paginação, as interrupções e o relógio.
+  - Um escalonador troca de tarefa 100 vezes por segundo.
+  - O compositor (tarefa "gui") desenha as janelas e distribui os eventos
+    de teclado e mouse para os aplicativos.
+
+ATENÇÃO
+  Os arquivos ficam na memória (ramfs): tudo some ao desligar.
+  Gravação em disco é o próximo passo do roteiro (veja README.md).

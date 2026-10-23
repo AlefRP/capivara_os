@@ -1,0 +1,6 @@
+# Finais de linha: LF em tudo, porque o build roda em Linux, macOS e containers
+# (um "\r" no fim da linha quebra scripts sh). Só o script do PowerShell fica CRLF.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.bmp binary

@@ -1,0 +1,45 @@
+# Roteiro de teste automático (tools/qemu-test.py). Screenshots vão para build/test/.
+sleep 14
+shot 01-tela-de-bloqueio
+key ret
+sleep 3
+shot 02-area-de-trabalho
+# Dock: passar o mouse amplia os ícones
+move 512 735
+sleep 1.5
+shot 03-dock
+# Launchpad (tecla Super) e pesquisa (Super+Espaço)
+key meta_l
+sleep 2
+shot 04-launchpad
+key esc
+sleep 1
+key meta_l-spc
+sleep 1
+type calc
+sleep 1
+shot 05-pesquisa
+key ret
+sleep 2
+type 12*3=
+sleep 1
+shot 06-calculadora
+# Terminal (Super+T), Explorador (Super+E), Mission Control (Super+Tab)
+key meta_l-t
+sleep 2.5
+type sysinfo
+key ret
+sleep 1.5
+shot 07-terminal
+key meta_l-e
+sleep 2.5
+shot 08-explorador
+key meta_l-tab
+sleep 2
+shot 09-mission-control
+key esc
+sleep 1
+# Gerenciador de Tarefas
+key ctrl-shift-esc
+sleep 2.5
+shot 10-gerenciador

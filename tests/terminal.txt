@@ -1,0 +1,32 @@
+# Terminal: arquivos, abrir aplicativo, ps/kill e tree.
+sleep 14
+key ret
+sleep 3
+key alt-f4
+sleep 1
+key meta_l-t
+sleep 3
+type mkdir teste
+key ret
+type echo ola mundo > teste/a.txt
+key ret
+type cat teste/a.txt
+key ret
+type abrir calc
+key ret
+sleep 2.5
+key alt-tab
+sleep 1
+type ps
+key ret
+sleep 0.5
+type kill 5
+key ret
+sleep 1.5
+type ps
+key ret
+sleep 0.5
+type tree teste
+key ret
+sleep 1
+shot 70-kill

@@ -1,0 +1,6 @@
+# saída do build
+build/
+
+# imagens de disco (não versionar; a ISO do Windows não faz parte do projeto)
+*.iso
+*.img
