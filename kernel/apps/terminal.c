@@ -9,6 +9,7 @@
 #include "dev/rtc.h"
 #include "dev/power.h"
 #include "dev/keyboard.h"
+#include "dev/audio.h"
 #include "mm/pmm.h"
 #include "mm/heap.h"
 #include "sched/task.h"
@@ -19,6 +20,7 @@
 #include "lib/printf.h"
 #include "apps/notify.h"
 #include "apps/trash.h"
+#include "apps/ostep.h"
 #include "gui/wm.h"
 
 #define MAX_COLS   160
@@ -82,6 +84,9 @@ static void printc(term_t *t, int color, const char *fmt, ...) {
 }
 
 #define print(t, ...) printc(t, C_TEXT, __VA_ARGS__)
+
+/* saída dos laboratórios do OSTEP (apps/ostep.c): as cores são as mesmas */
+static void lab_write(void *ctx, int color, const char *s) { put(ctx, s, color); }
 
 static void cwd_display(term_t *t, char *out, size_t size) {
     char p[VFS_PATH_MAX];
@@ -285,6 +290,48 @@ static void cmd_sysinfo(term_t *t) {
     put(t, "\n", 0);
 }
 
+/* Uma nota senoidal na placa de som. O envelope (sobe em 5 ms e desce até o
+ * fim) evita o estalo que um som cortado de repente faz. */
+static void play_tone(float freq, int ms) {
+    static int16_t chunk[256 * 2];
+    int total = AUDIO_RATE * ms / 1000, stuck = 0;
+    float phase = 0, step = 2 * GFX_PI * freq / AUDIO_RATE;
+    for (int done = 0; done < total && stuck < 200; ) {
+        int n = total - done < 256 ? total - done : 256;
+        for (int i = 0; i < n; i++) {
+            int k = done + i;
+            float env = k < 240 ? k / 240.0f : (float)(total - k) / total;
+            chunk[2 * i] = chunk[2 * i + 1] = (int16_t)(gfx_sin(phase) * env * 9000);
+            phase += step;
+            if (phase > 2 * GFX_PI) phase -= 2 * GFX_PI;
+        }
+        /* fila cheia: espera a placa tocar um pouco (e desiste se ela não andar) */
+        for (int off = 0; off < n && stuck < 200; ) {
+            size_t w = audio_write(chunk + off * 2, (size_t)(n - off));
+            off += (int)w;
+            if (off < n) { task_sleep(5); stuck = w ? 0 : stuck + 1; }
+        }
+        done += n;
+    }
+}
+
+static void cmd_som(term_t *t, int argc, char **argv) {
+    if (!audio_present()) {
+        printc(t, C_RED, "Nenhuma placa de som. O sistema conhece a AC'97 (no VirtualBox: Áudio > ICH AC97).\n");
+        return;
+    }
+    if (argc > 2 && !strcmp(argv[1], "volume")) {
+        audio_set_volume((int)strtol(argv[2], NULL, 10));
+    } else if (argc > 1 && !strcmp(argv[1], "teste")) {
+        static const float notas[] = { 523.25f, 659.25f, 783.99f, 1046.5f };   /* dó, mi, sol, dó */
+        for (int i = 0; i < 4; i++) play_tone(notas[i], i == 3 ? 450 : 180);
+    } else if (argc > 1) {
+        print(t, "uso: som [teste | volume 0-100]\n");
+        return;
+    }
+    print(t, "Placa: %s, %d Hz estéreo, volume %d%%\n", audio_name(), AUDIO_RATE, audio_volume());
+}
+
 static const char *state_name(task_state_t s) {
     switch (s) {
     case TASK_READY: return "pronta";
@@ -338,6 +385,8 @@ static void help(term_t *t) {
         { "history", "comandos anteriores" }, { "clear", "limpa a tela" },
         { "teclado [abnt2|us]", "mostra/troca o layout do teclado" },
         { "tema [claro|escuro]", "mostra/troca o tema" },
+        { "som [teste|volume N]", "placa de som: testa ou muda o volume" },
+        { "ostep", "laboratórios do livro OSTEP (escalonar, heap...)" },
         { "notificar <texto>", "mostra uma notificação" }, { "captura", "salva a tela em Imagens" },
         { "lixeira [esvaziar]", "lista ou esvazia a Lixeira" }, { "bloquear", "tela de bloqueio" },
         { "reiniciar / desligar", "energia" }, { "exit", "fecha o terminal" },
@@ -509,6 +558,7 @@ static void run(term_t *t, char *line) {
         uint64_t s = timer_ms() / 1000;
         print(t, "ligado há %lu h %lu min %lu s\n", s / 3600, (s / 60) % 60, s % 60);
     }
+    else if (!strcmp(cmd, "som")) cmd_som(t, argc, argv);
     else if (!strcmp(cmd, "uname")) print(t, argc > 1 ? "Capivara " CAPIVARA_VERSION " x86_64 (kernel próprio, compilado com GCC)\n" : "Capivara\n");
     else if (!strcmp(cmd, "teclado")) {
         if (argc > 1 && !strcasecmp(argv[1], "us")) keyboard_set_layout(KB_LAYOUT_US);
@@ -566,7 +616,10 @@ static void run(term_t *t, char *line) {
     else if (!strcmp(cmd, "reiniciar") || !strcmp(cmd, "reboot")) power_reboot();
     else if (!strcmp(cmd, "desligar") || !strcmp(cmd, "shutdown") || !strcmp(cmd, "poweroff")) power_off();
     else if (!strcmp(cmd, "exit") || !strcmp(cmd, "sair")) t->quit = true;
-    else printc(t, C_RED, "%s: comando não encontrado (digite 'ajuda')\n", cmd);
+    else {
+        lab_out_t lo = { lab_write, t, t->cwd };
+        if (!lab_run(&lo, argc, argv)) printc(t, C_RED, "%s: comando não encontrado (digite 'ajuda')\n", cmd);
+    }
 }
 
 /* completa o nome de arquivo com Tab */
@@ -678,9 +731,16 @@ void terminal_main(void *arg) {
     term_t *t = kcalloc(1, sizeof(term_t));
     t->lines = kcalloc(MAX_LINES, sizeof(line_t));
     t->cwd = vfs_lookup(NULL, "/home/usuario");
+    /* O argumento é a pasta onde começar ou, com "cmd:", um comando para já
+     * rodar (o app Estudos abre os laboratórios assim). */
+    char *first_cmd = NULL;
     if (arg) {
-        vnode_t *d = vfs_lookup(NULL, arg);
-        if (d && d->type == VFS_DIR) t->cwd = d;
+        if (!strncmp(arg, "cmd:", 4)) {
+            first_cmd = kstrdup((char *)arg + 4);
+        } else {
+            vnode_t *d = vfs_lookup(NULL, arg);
+            if (d && d->type == VFS_DIR) t->cwd = d;
+        }
         kfree(arg);
     }
     t->win = win_create("Terminal", ICON_TERMINAL, WIN_AUTO, WIN_AUTO, 736, 448, WF_APP);
@@ -689,6 +749,13 @@ void terminal_main(void *arg) {
     printc(t, C_YELLOW, "Capivara OS - terminal\n");
     printc(t, C_DIM, "Digite 'ajuda' para ver os comandos.\n\n");
     prompt(t);
+    if (first_cmd) {
+        draw(t);                  /* mostra a janela antes: o comando pode demorar */
+        strlcpy(t->input, first_cmd, sizeof(t->input));
+        t->in_len = t->in_cur = (int)strlen(t->input);
+        kfree(first_cmd);
+        submit(t);
+    }
     t->cursor_on = true;
     draw(t);
     ev_set_timer(530);

@@ -72,10 +72,51 @@ ASM_SRC  := $(wildcard kernel/arch/x86_64/*.S)
 CORE_OBJ := $(CORE_SRC:%.c=$(OBJ)/%.o)
 GUI_OBJ  := $(GUI_SRC:%.c=$(OBJ)/%.o) $(OBJ)/gen/font_data.o
 ASM_OBJ  := $(ASM_SRC:%.S=$(OBJ)/%.o)
-ALL_OBJ  := $(ASM_OBJ) $(CORE_OBJ) $(GUI_OBJ)
 
+# Extras: programas de fora do repositório que entram só num build local
+# (docs/extras.md), como um jogo que não pode ser publicado. EXTRAS é uma
+# lista de pastas; sem ela, vale o arquivo extras.local (uma pasta por linha),
+# que não vai para o Git. O CI e as Releases não têm nenhum dos dois.
+#
+# Cada pasta tem um capivara.mk que define, com caminhos relativos a ela:
+#   EXTRA_NAME   nome curto (vira a pasta dos objetos em build/obj/extras/)
+#   EXTRA_FILES  fontes .c, compiladas como os apps (com SSE)
+#   EXTRA_FLAGS  opções a mais para essas fontes (ex.: -I$(EXTRA_DIR)/include)
+# (as regras dos extras vêm antes do "all:", então o alvo padrão é explícito)
+.DEFAULT_GOAL := all
+EXTRAS ?= $(shell sed -e 's/\#.*//' extras.local 2>/dev/null)
+EXTRA_OBJ :=
+define add_extra
+EXTRA_DIR := $(1)
+EXTRA_NAME :=
+EXTRA_FILES :=
+EXTRA_FLAGS :=
+include $(1)/capivara.mk
+X_OBJ := $$(EXTRA_FILES:%.c=$$(OBJ)/extras/$$(EXTRA_NAME)/%.o)
+$$(X_OBJ): XFLAGS := $$(EXTRA_FLAGS)
+$$(X_OBJ): $$(OBJ)/extras/$$(EXTRA_NAME)/%.o: $(1)/%.c
+	@mkdir -p $$(@D)
+	$$(CC) $$(CFLAGS_GUI) $$(XFLAGS) -c $$< -o $$@
+EXTRA_OBJ += $$(X_OBJ)
+endef
+# Pasta sem capivara.mk (ou um caminho do Windows lido dentro do container,
+# quando o make é chamado sem os scripts) só gera um aviso.
+EXTRAS := $(foreach d,$(EXTRAS),$(if $(wildcard $(d)/capivara.mk),$(d),$(warning extra ignorado, sem capivara.mk: $(d))))
+$(foreach d,$(EXTRAS),$(eval $(call add_extra,$(d))))
+
+ALL_OBJ  := $(ASM_OBJ) $(CORE_OBJ) $(GUI_OBJ) $(EXTRA_OBJ)
+
+# A lista de extras fica anotada num arquivo: se ela muda (um extra entrou ou
+# saiu), o kernel é ligado de novo, mesmo sem nenhum objeto novo.
+EXTRAS_LIST := $(BUILD)/extras.lista
+$(shell mkdir -p $(BUILD) && echo '$(EXTRAS)' | cmp -s - $(EXTRAS_LIST) || echo '$(EXTRAS)' > $(EXTRAS_LIST))
+
+# A placa de som é a AC'97, a mesma que o build.ps1 liga no VirtualBox.
+# QEMU_AUDIO escolhe a saída no computador (pa, alsa, coreaudio, dsound...);
+# sem ela, o QEMU usa a primeira que funcionar.
+QEMU_SOM := $(if $(QEMU_AUDIO),-audiodev $(QEMU_AUDIO)$(,)id=som -device AC97$(,)audiodev=som,-device AC97)
 QEMU_FLAGS := -m 512M -cdrom $(ISO) -serial stdio -rtc base=localtime \
-	-no-reboot -no-shutdown
+	-no-reboot -no-shutdown $(QEMU_SOM)
 
 # Firmware UEFI para o QEMU: cada sistema guarda o OVMF num lugar diferente
 OVMF ?= $(firstword $(wildcard \
@@ -113,7 +154,7 @@ $(FONT_C): kernel/gui/font/unifont-subset.hex tools/unifont2c.py
 	@mkdir -p $(@D)
 	$(PYTHON) tools/unifont2c.py $< $@
 
-$(KERNEL): $(ALL_OBJ) kernel/linker.ld
+$(KERNEL): $(ALL_OBJ) kernel/linker.ld $(EXTRAS_LIST)
 	$(LD) $(LDFLAGS) -o $@ $(ALL_OBJ)
 
 # Arquivos iniciais do sistema (empacotados num tar que o GRUB carrega como módulo)

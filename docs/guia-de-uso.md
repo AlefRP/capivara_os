@@ -115,6 +115,11 @@ Fotos.
 | <img src="img/icones/gerenciador.png" width="32" alt=""> | Gerenciador de Tarefas | Ctrl+Shift+Esc. Mostra CPU e memória por tarefa e permite finalizar uma tarefa |
 | <img src="img/icones/configuracoes.png" width="32" alt=""> | Configurações | Personalização, Contas, Sistema, Data e hora (teclado ABNT2/EUA) e Sobre |
 | <img src="img/icones/lixeira.png" width="32" alt=""> | Lixeira | restaura ou esvazia. Também abre pelo Explorador |
+| <img src="img/icones/estudos.png" width="32" alt=""> | Estudos | guia do livro OSTEP ([Estudando o OSTEP](ostep.md)). Clique num capítulo à esquerda; ← e → trocam de capítulo; clique duplo numa linha de comando abre o Terminal rodando ela |
+
+Programas que ficam fora do repositório, como um jogo seu, podem entrar no
+sistema que você compila em casa, com o ícone de controle de videogame. Veja
+[Programas extras](extras.md).
 
 ## ⌨️ Terminal
 
@@ -140,6 +145,7 @@ Digite `ajuda` para ver a lista. Também existe o redirecionamento `>`, como em
 | `history`, `clear` | comandos anteriores / limpa a tela |
 | `teclado [abnt2\|us]` | mostra ou troca o layout do teclado |
 | `tema [claro\|escuro]` | mostra ou troca o tema |
+| `som [teste\|volume N]` | mostra a placa de som, toca dó-mi-sol ou muda o volume (0 a 100) |
 | `notificar <texto>` | mostra uma notificação |
 | `captura` | salva a tela em Imagens |
 | `lixeira [esvaziar]` | lista ou esvazia a Lixeira |
@@ -147,11 +153,41 @@ Digite `ajuda` para ver a lista. Também existe o redirecionamento `>`, como em
 | `reiniciar`, `desligar` | energia |
 | `exit` | fecha o Terminal |
 
+Os **laboratórios do OSTEP** também são comandos do Terminal. `ostep` mostra a
+lista; o que cada um ensina está em [Estudando o OSTEP](ostep.md).
+
+| Comando | O que faz |
+|---|---|
+| `ostep` | lista os laboratórios e os capítulos de cada um |
+| `trocas` | trocas de contexto do escalonador, no total e por tarefa |
+| `escalonar <política> [q=N] [s=N] [tarefas]` | simula FIFO, SJF, STCF, RR, MLFQ ou loteria |
+| `heap [blocos [N] \| teste]` | o heap do kernel: blocos, fragmentação, divisão e junção |
+| `traduzir [endereço]` | o caminho de um endereço virtual pelas tabelas de página |
+| `paginas <política> [quadros] [refs]`, `paginas belady` | simula FIFO, LRU, OPT ou relógio |
+| `corrida [trava] [N]` | duas tarefas somam num contador, sem ou com mutex |
+| `disco <política> [cabeça] [trilhas]` | simula FIFO, SSTF, SCAN ou C-SCAN |
+| `stat <caminho>` | os metadados de um arquivo ou pasta |
+
 ## ⌨️ Teclado
 
 O layout padrão é o **ABNT2**, com acentos: ´ ` ~ ^ ¨ seguidos da letra. Se o
 seu teclado for americano, use `teclado us` no Terminal ou Configurações ›
 Data e hora.
+
+## 🔊 Som
+
+O sistema tem um driver para a placa de som **AC'97**, a que o VirtualBox e o
+QEMU emulam. O som sai em 48 kHz, estéreo.
+
+- **VirtualBox:** Configurações da VM › Áudio › Controlador de áudio
+  **ICH AC97**. O `.\build.ps1 vbox` já deixa a VM assim.
+- **QEMU:** `-device AC97`. O `make run` já passa essa opção. Para escolher a
+  saída, use `QEMU_AUDIO`, por exemplo `make run QEMU_AUDIO=alsa`.
+- No Terminal, `som` mostra a placa, `som teste` toca três notas e
+  `som volume 50` muda o volume.
+
+PCs de hoje usam outra placa, a HD Audio (Intel HDA), que o sistema ainda não
+conhece. Em hardware real, o sistema funciona sem som.
 
 ## 🖱️ Mouse em máquina virtual
 

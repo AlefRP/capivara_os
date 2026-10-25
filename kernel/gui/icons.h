@@ -32,6 +32,8 @@ enum {
     ICON_EXPLORER,      /* ícone do aplicativo (as pastas usam ICON_FOLDER) */
     ICON_LAUNCHPAD,
     ICON_DISK,
+    ICON_GAME,          /* controle de videogame: jogos */
+    ICON_BOOK,          /* livro aberto: app Estudos */
     ICON_COUNT,
 };
 

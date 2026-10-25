@@ -29,8 +29,15 @@ static volatile bool resched;
 static uint32_t slice_left = TIMESLICE_MS;
 static uint8_t fpu_template[512] __attribute__((aligned(16)));
 static void (*exit_hook)(task_t *t);
+static sched_stats_t counters;
 
 task_t *task_current(void) { return current; }
+
+void sched_stats(sched_stats_t *out) {
+    uint64_t f = irq_save();
+    *out = counters;
+    irq_restore(f);
+}
 void sched_set_exit_hook(void (*hook)(task_t *t)) { exit_hook = hook; }
 
 static void add_task(task_t *t) {
@@ -132,6 +139,7 @@ int task_snapshot(task_info_t *out, int max) {
         i->started_at = t->started_at;
         i->stack_size = t->stack_size;
         i->mem_bytes = t->mem_bytes;
+        i->runs = t->runs;
         i->system = t->system;
     }
     irq_restore(f);
@@ -295,6 +303,9 @@ regs_t *sched_switch(regs_t *regs) {
     if (!next) next = (current->state == TASK_READY && current != idle_task) ? current : idle_task;
 
     if (next != current) {
+        counters.switches++;
+        if (current->state == TASK_READY) counters.involuntary++;
+        next->runs++;
         __asm__ volatile("fxsave (%0)" :: "r"(current->fpu) : "memory");
         __asm__ volatile("fxrstor (%0)" :: "r"(next->fpu) : "memory");
     }

@@ -29,6 +29,12 @@ baseado em Linux. Visão geral no [README](README.md); funcionamento interno em
   arquivos vizinhos. O build não pode ter avisos (`-Wall -Wextra`).
 - **Arte é código.** Ícones ficam em `kernel/gui/icons.c` (grade de 32×32
   unidades); o papel de parede da capivara, em `kernel/gui/wallpaper_pixel.c`.
+- **Extras ficam fora.** Programas de fora do repositório entram só no build
+  local, pela lista `extras.local` ([docs/extras.md](docs/extras.md)). O
+  exemplo é o port do Castlevania em `D:\Projetos\castlevania` (frontend em
+  `capivara/castlevania.c` lá), que tem código e dados da Konami. Nunca
+  copie código, dados ou imagens de um extra para este repositório, para
+  `tests/` ou para o CI, e nunca publique uma ISO compilada com extras.
 
 ## Comandos
 
@@ -66,7 +72,12 @@ de capturas de tela.
 - Mudança grande na interface → regere as capturas com `tests/readme.txt`
   (instruções no próprio arquivo).
 - Comando novo no Terminal → acrescente-o em `help()` (`kernel/apps/terminal.c`)
-  e na tabela do guia de uso.
+  e na tabela do guia de uso. Laboratório novo do OSTEP → `kernel/apps/ostep.c`,
+  `lab_index()`, [docs/ostep.md](docs/ostep.md) e `tests/ostep.txt`.
+- Mudou algo que o guia do OSTEP cita (escalonador, heap, paginação, mutex,
+  eventos, VFS, drivers)? Confira o texto em
+  `rootfs/home/usuario/Documentos/OSTEP/`: ele aponta funções e números do
+  código. O guia é texto próprio; nunca copie trechos do livro.
 
 ## No Windows
 

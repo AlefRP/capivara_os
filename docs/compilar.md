@@ -46,6 +46,13 @@ Para forçar um dos caminhos: `MODO=container sh build.sh` ou
 `MODO=nativo sh build.sh`. Com o Podman no lugar do Docker, nada muda:
 o script detecta sozinho, ou use `ENGINE=podman`.
 
+O `make run` liga a placa de som AC'97 no QEMU, que usa a primeira saída de
+áudio que funcionar. Para escolher outra: `make run QEMU_AUDIO=alsa` (ou `pa`,
+`coreaudio`, `dsound`...).
+
+Programas de fora do repositório entram no build pelo arquivo
+`extras.local`. Veja [Programas extras](extras.md).
+
 ### Ferramentas nativas por sistema
 
 Com estes pacotes, o `sh build.sh` compila direto, sem container. Num Linux

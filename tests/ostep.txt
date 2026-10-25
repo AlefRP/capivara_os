@@ -1,0 +1,84 @@
+# Laboratórios do OSTEP no Terminal (apps/ostep.c): cada um roda e mostra a saída.
+waitlog kmain: pronto
+sleep 4
+key ret
+sleep 3
+key alt-f4
+sleep 1
+key meta_l-t
+sleep 2.5
+key meta_l-up
+sleep 1
+type ostep
+key ret
+sleep 1
+shot 01-ostep
+type clear
+key ret
+type escalonar rr q=2
+key ret
+sleep 1
+shot 02-escalonar-rr
+type clear
+key ret
+type escalonar mlfq q=2 s=40 0:60 10:6
+key ret
+sleep 1
+shot 03-escalonar-mlfq
+type clear
+key ret
+type paginas lru 3
+key ret
+sleep 1
+type paginas belady
+key ret
+sleep 1
+shot 04-paginas
+type clear
+key ret
+type traduzir
+key ret
+sleep 1
+shot 05-traduzir
+type clear
+key ret
+type heap teste
+key ret
+sleep 1
+type heap
+key ret
+sleep 1
+shot 06-heap
+type clear
+key ret
+type trocas
+key ret
+sleep 2.5
+shot 07-trocas
+type clear
+key ret
+type corrida 3000000
+key ret
+sleep 8
+type corrida trava 3000000
+key ret
+sleep 12
+type disco sstf
+key ret
+sleep 1
+type stat Documentos/Bem-vindo.txt
+key ret
+sleep 1
+shot 08-corrida-disco-stat
+# O guia (app Estudos): abre pela pesquisa, maximiza e troca de capítulo
+key meta_l-spc
+sleep 1
+type estudos
+sleep 1
+key ret
+sleep 3
+key meta_l-up
+sleep 1.5
+click 100 242
+sleep 1.5
+shot 09-estudos

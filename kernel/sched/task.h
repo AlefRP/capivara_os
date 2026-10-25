@@ -29,6 +29,7 @@ typedef struct task {
     uint64_t cpu_ticks, cpu_ticks_prev;
     uint32_t cpu_percent;      /* uso de CPU no último segundo */
     uint64_t started_at;
+    uint64_t runs;             /* quantas vezes o escalonador a pôs na CPU */
 
     /* fila de eventos */
     event_t evq[EVQ_SIZE];
@@ -54,9 +55,15 @@ typedef struct {
     char name[32];
     task_state_t state;
     uint32_t cpu_percent;
-    uint64_t cpu_ms, started_at, stack_size, mem_bytes;
+    uint64_t cpu_ms, started_at, stack_size, mem_bytes, runs;
     bool system;
 } task_info_t;
+
+/* Contadores do escalonador desde o boot (laboratório "trocas" do Terminal).
+ * Uma troca é "involuntária" quando a tarefa que sai ainda podia rodar: acabou
+ * a fatia de tempo dela, acordou alguém ou ela só cedeu a vez (yield). */
+typedef struct { uint64_t switches, involuntary; } sched_stats_t;
+void    sched_stats(sched_stats_t *out);
 
 void    sched_init(void);
 task_t *task_create(const char *name, task_entry_t entry, void *arg);

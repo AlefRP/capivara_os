@@ -55,7 +55,7 @@ salva os ícones em PNG transparente, em `docs/img/icones/`. Para ver um ícone
 novo, inclua-o na lista de `main()` em `tools/arte/arte.c`. Rode no container:
 
 ```sh
-MSYS_NO_PATHCONV=1 docker run --rm --platform linux/amd64 -v "D:/Projetos/so:/src" -w /src \
+MSYS_NO_PATHCONV=1 docker run --rm --platform linux/amd64 -v "D:/Projetos/capivara_os:/src" -w /src \
   capivara-toolchain sh -c 'make arte && convert \
     \( -size 290x150 xc:"#d8dee6" \) \( -size 290x150 xc:"#0d1117" \) +append \
     docs/img/icones/terminal.png -geometry +10+10 -composite \

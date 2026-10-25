@@ -11,9 +11,23 @@ typedef struct {
     bool pinned;                  /* aparece fixado na barra de tarefas */
 } app_info_t;
 
-extern const app_info_t app_list[];
-extern const int app_count;
+/* Os apps do sistema e, no fim, os extras. Só leitura: quem monta é apps_init(). */
+extern app_info_t app_list[];
+extern int app_count;
 
+/* Programas "extras" vêm de fora do repositório e só entram num build local
+ * (docs/extras.md). Cada um se registra assim, num arquivo dele:
+ *
+ *     EXTRA_APP(meu_jogo, "jogo", "Meu Jogo", "Descrição", ICON_GAME, jogo_main, true);
+ *
+ * A entrada vai para a seção .extra_apps do kernel (kernel/linker.ld), e
+ * apps_init() a acrescenta à lista no boot. Assim o código do sistema não
+ * precisa conhecer os extras. */
+#define EXTRA_APP(var, ...) \
+    __attribute__((used, section(".extra_apps"), aligned(8))) \
+    static const app_info_t var = { __VA_ARGS__ }
+
+void apps_init(void);
 const app_info_t *app_find(const char *id);
 bool app_launch(const char *id, const char *arg);
 void app_open_path(const char *path);        /* abre com o aplicativo adequado */
@@ -29,3 +43,4 @@ void taskmgr_main(void *arg);
 void paint_main(void *arg);
 void photos_main(void *arg);
 void snip_main(void *arg);
+void estudos_main(void *arg);

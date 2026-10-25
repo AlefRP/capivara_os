@@ -34,6 +34,11 @@ SECTIONS
     . = ALIGN(4K);
     .rodata : AT(ADDR(.rodata) - KERNEL_VMA) {
         *(.rodata .rodata.*)
+        /* programas extras (EXTRA_APP em apps/apps.h), um atrás do outro */
+        . = ALIGN(8);
+        __extra_apps_start = .;
+        KEEP(*(.extra_apps))
+        __extra_apps_end = .;
     }
 
     . = ALIGN(4K);

@@ -61,6 +61,39 @@ void vmm_unmap(uint64_t virt) {
     irq_restore(f);
 }
 
+/* Faz à mão o que a MMU faz em hardware: começa na PML4 (o CR3 aponta para
+ * ela) e usa 9 bits do endereço por nível. Uma entrada com PTE_HUGE no PDPT
+ * ou no PD já é a página (1 GiB ou 2 MiB), sem os níveis de baixo. */
+bool vmm_walk(uint64_t virt, vmm_walk_t *out) {
+    memset(out, 0, sizeof(*out));
+    out->cr3 = read_cr3() & PTE_ADDR;
+    /* canônico: os bits 63..48 repetem o bit 47 */
+    uint64_t top = virt >> 47;
+    if (top != 0 && top != 0x1FFFF) return false;
+
+    uint64_t f = irq_save();
+    uint64_t *table = kernel_pml4;
+    bool ok = false;
+    for (int level = 0; level < 4; level++) {
+        int idx = (virt >> (39 - 9 * level)) & 511;
+        uint64_t e = table[idx];
+        out->index[level] = (uint16_t)idx;
+        out->entry[level] = e;
+        out->levels = level + 1;
+        if (!(e & PTE_PRESENT)) break;
+        uint64_t size = level == 1 ? 1ULL << 30 : level == 2 ? 2ULL << 20 : level == 3 ? 4096 : 0;
+        if (level == 3 || (size && (e & PTE_HUGE))) {
+            out->page_size = size;
+            out->phys = (e & PTE_ADDR & ~(size - 1)) + (virt & (size - 1));
+            ok = true;
+            break;
+        }
+        table = phys_to_virt(e & PTE_ADDR);
+    }
+    irq_restore(f);
+    return ok;
+}
+
 /* Mapeia [0, limite) em PHYSMAP_BASE usando páginas grandes de 2 MiB. */
 static void build_physmap(uint64_t limit) {
     for (uint64_t addr = 0; addr < limit; addr += 2ULL << 20) {

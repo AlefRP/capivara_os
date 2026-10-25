@@ -109,7 +109,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86 imagemagick
       - name: Roteiros de teste
         run: |
-          for roteiro in gui recursos terminal; do
+          for roteiro in gui recursos terminal ostep; do
             echo "::group::tests/$roteiro.txt"
             python3 tools/qemu-test.py tests/$roteiro.txt --out build/test/$roteiro
             echo "::endgroup::"

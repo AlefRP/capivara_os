@@ -19,11 +19,18 @@ sh build.sh test tests/boot.txt --usb --uefi --out build/test/pendrive
 - `--usb`: a ISO vira um pendrive USB virtual, o mesmo caminho de um pendrive real.
 - `--uefi`: firmware UEFI (OVMF) no lugar da BIOS.
 - `--iso CAMINHO`: testa outra ISO (útil quando a do `build/` está travada pela VM).
+- `--som`: grava a saída da placa de som (AC'97) em `som.wav`, na pasta de
+  saída. Sem ele, a placa existe, mas o som vai para lugar nenhum. Para saber
+  se tocou algo, leia o WAV com o módulo `wave` do Python, no container.
+
+O QEMU do container não tem aceleração por hardware: o sistema roda várias
+vezes mais devagar que no VirtualBox. Bom para ver se funciona, ruim para
+medir velocidade (um jogo, por exemplo, cai para uns 30 quadros por segundo).
 
 No Windows (Git Bash), o `build.sh` usa o container sozinho. Para chamar direto:
 
 ```sh
-MSYS_NO_PATHCONV=1 docker run --rm --platform linux/amd64 -v "D:/Projetos/so:/src" -w /src \
+MSYS_NO_PATHCONV=1 docker run --rm --platform linux/amd64 -v "D:/Projetos/capivara_os:/src" -w /src \
   capivara-toolchain python3 tools/qemu-test.py tests/gui.txt --out build/test/gui
 ```
 
@@ -46,6 +53,7 @@ Uma ação por linha. Linhas com `#` são comentários.
 | `sleep S` | `sleep 2.5` | espera |
 | `shot NOME` | `shot 01-calc` | salva `NOME.png` na pasta de saída |
 | `key COMBO` | `key ctrl-shift-esc` | teclas com nomes *qcode* do QEMU, unidas por `-` |
+| `hold COMBO S` | `hold right-x 1.5` | segura as teclas por S segundos (jogos) |
 | `type TEXTO` | `type sysinfo` | digita (ASCII; o mapa é do teclado ABNT2) |
 | `move X Y` | `move 512 735` | move o mouse (tela de 1024×768) |
 | `click X Y [right]` | `click 30 13` | clica |

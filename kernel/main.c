@@ -16,6 +16,7 @@
 #include "dev/rtc.h"
 #include "dev/power.h"
 #include "dev/vbox.h"
+#include "dev/audio.h"
 #include "fs/vfs.h"
 #include "gui/wm.h"
 #include "gui/theme.h"
@@ -58,8 +59,10 @@ void kmain(uint32_t magic, uint64_t info_phys) {
     keyboard_init();
     mouse_init(!bootinfo_has_arg("novmmouse"));
     if (!bootinfo_has_arg("novbox")) vbox_init();
+    if (!bootinfo_has_arg("nosom")) audio_init();
 
     /* interface gráfica: compositor + shell (área de trabalho e barra de tarefas) */
+    apps_init();
     theme_apply(false, 0, 0);
     wm_init();
     task_t *shell = task_create("shell", shell_main, NULL);

@@ -2,11 +2,13 @@
 """Roda o Capivara OS no QEMU sem janela e executa um roteiro de testes.
 
 Uso:  python3 tools/qemu-test.py ROTEIRO [--iso build/capivara.iso] [--out build/test]
-                                         [--uefi] [--usb]
+                                         [--uefi] [--usb] [--som]
 
     --uefi   dá boot com firmware UEFI (OVMF) em vez da BIOS
     --usb    "grava" a ISO num pendrive virtual (disco USB) em vez de usar o
              drive de CD: é o mesmo caminho de boot de um pendrive de verdade
+    --som    grava o que sai da placa de som (AC'97) em build/test/som.wav;
+             sem ele, a placa existe, mas o som vai para lugar nenhum
 
 Comandos do roteiro (um por linha):
     sleep 2.5            espera (segundos)
@@ -18,6 +20,7 @@ Comandos do roteiro (um por linha):
     dclick X Y           duplo clique
     drag X1 Y1 X2 Y2     arrasta com o botão esquerdo
     key ctrl-shift-esc   combinação de teclas (nomes "qcode" do QEMU)
+    hold right 2.5       segura teclas por um tempo (ex.: num jogo; "hold right-x 1")
     type texto           digita texto (ASCII simples)
     wheel X Y N          gira a roda (N>0 para cima)
 """
@@ -151,9 +154,11 @@ def main():
         media = ["-device", "qemu-xhci", "-device", "usb-storage,drive=pendrive,bootindex=0",
                  "-drive", "if=none,id=pendrive,format=raw,readonly=on,file=" + iso]
     firmware = uefi_firmware() if "--uefi" in args else []
+    som = "wav,path=" + os.path.join(out, "som.wav") if "--som" in args else "none"
 
     qemu = subprocess.Popen([
         "qemu-system-x86_64", "-m", "512M", *media, *firmware, "-display", "none",
+        "-audiodev", som + ",id=som", "-device", "AC97,audiodev=som",
         "-serial", "file:" + os.path.join(out, "serial.log"),
         "-qmp", "unix:%s,server,nowait" % sock, "-rtc", "base=localtime",
         "-no-reboot"])
@@ -202,6 +207,11 @@ def main():
             elif op == "key":
                 keys = [{"type": "qcode", "data": k} for k in a[0].split("-")]
                 q.cmd("send-key", keys=keys)
+            elif op == "hold":
+                keys = [{"type": "qcode", "data": k} for k in a[0].split("-")]
+                q.cmd("input-send-event", events=[{"type": "key", "data": {"down": True, "key": k}} for k in keys])
+                time.sleep(float(a[1]))
+                q.cmd("input-send-event", events=[{"type": "key", "data": {"down": False, "key": k}} for k in keys])
             elif op == "type":
                 text = line[len("type "):]
                 for ch in text:

@@ -151,6 +151,15 @@ void *krealloc(void *p, size_t size) {
     return n;
 }
 
+int heap_snapshot(heap_block_t *out, int max) {
+    uint64_t f = irq_save();
+    int n = 0;
+    for (block_t *b = first; b; b = b->next, n++)
+        if (n < max) out[n] = (heap_block_t){ (uint64_t)b, b->size, b->magic == MAGIC_FREE, b->owner };
+    irq_restore(f);
+    return n;
+}
+
 void heap_stats(heap_stats_t *out) {
     out->size = heap_end - HEAP_BASE;
     out->used = used_bytes;

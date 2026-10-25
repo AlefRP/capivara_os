@@ -19,3 +19,15 @@ void  vmm_init(void);
 bool  vmm_map(uint64_t virt, uint64_t phys, uint64_t flags);
 void  vmm_unmap(uint64_t virt);
 void *phys_to_virt(uint64_t phys);
+
+/* O caminho de um endereço virtual pelas tabelas, nível por nível, como a
+ * MMU faz em cada acesso (usado pelo laboratório "traduzir" do Terminal). */
+typedef struct {
+    uint64_t cr3;              /* endereço físico da PML4 */
+    int levels;                /* quantos níveis foram lidos (0 = endereço não canônico) */
+    uint16_t index[4];         /* entrada usada em PML4, PDPT, PD e PT */
+    uint64_t entry[4];         /* o valor de cada entrada lida */
+    uint64_t page_size;        /* 4 KiB, 2 MiB ou 1 GiB; 0 = não mapeado */
+    uint64_t phys;             /* endereço físico final, se mapeado */
+} vmm_walk_t;
+bool  vmm_walk(uint64_t virt, vmm_walk_t *out);

@@ -25,7 +25,7 @@ flowchart TB
         sched["sched: tarefas, mutex, filas de eventos"]
         mm["mm: memória física, paginação, heap"]
         fs["fs: ramfs + initrd"]
-        dev["dev: teclado, mouse, RTC, PCI, ACPI, VirtualBox"]
+        dev["dev: teclado, mouse, RTC, PCI, ACPI, VirtualBox, som AC'97"]
         arch["arch/x86_64: boot, GDT, IDT, PIC, PIT"]
     end
     hw[("🖥️ Hardware / máquina virtual")]
@@ -64,8 +64,8 @@ flowchart TB
     a["serial → informações do GRUB → CPU (SSE) → GDT/TSS → IDT"] -->
     b["memória física → paginação (physmap) → heap"] -->
     c["PIC → PIT (1 kHz) → escalonador → relógio (RTC) → ACPI"] -->
-    d["sistema de arquivos + initrd → PS/2 → teclado → mouse → VirtualBox"] -->
-    e["tema → compositor (tarefa 'compositor') → shell (tarefa 'shell')"] -->
+    d["sistema de arquivos + initrd → PS/2 → teclado → mouse → VirtualBox → som"] -->
+    e["lista de apps (com os extras) → tema → compositor (tarefa 'compositor') → shell (tarefa 'shell')"] -->
     f["laço ocioso: hlt até a próxima interrupção"]
 ```
 
@@ -130,6 +130,17 @@ flowchart LR
   por janelas opacas.
 - Molduras, botões vermelho/amarelo/verde, sombras, Mission Control, Alt+Tab e
   layouts de encaixe são desenhados pelo compositor, e não pelos aplicativos.
+
+## 🔊 Som
+
+O driver [ac97.c](../kernel/dev/ac97.c) fala com a placa AC'97 (VirtualBox e
+QEMU) por duas faixas de portas de E/S: o mixer (volumes) e o *bus master*,
+que copia o som da RAM por DMA. A saída segue uma lista circular de 32
+descritores, cada um apontando para ~10,7 ms de som na memória física. Quem
+toca som chama `audio_write()`, que enche os pedaços à frente do que a placa
+está tocando, e consulta `audio_queued()` para manter a fila curta. Não há
+interrupção: um jogo, por exemplo, escreve a cada quadro e segue o relógio
+da placa ([dev/audio.h](../kernel/dev/audio.h)).
 
 ## 📁 Arquivos
 

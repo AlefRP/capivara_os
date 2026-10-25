@@ -226,6 +226,49 @@ void icon_draw(canvas_t *c, int icon, int x, int y, int size) {
         rrect(8, 12.5f, 16, 11.5f, 2, HEX(0xFFFFFF));
         rrect(8, 15, 16, 9, 2, HEX(0xE4F1FF));
         break;
+    case ICON_GAME:
+        /* Controle de videogame claro num squircle roxo: corpo com duas
+         * pegadas e a espessura lilás embaixo (formas opacas da mesma cor
+         * podem se sobrepor sem costura), direcional escuro e dois botões. */
+        squircle(HEX(0x9B7BFF), HEX(0x5333D6));
+        for (int k = 1; k >= 0; k--) {
+            float dy = k * 0.9f;
+            uint32_t col = k ? HEX(0xC9C1EE) : HEX(0xFAFAFC);
+            rrect(6.2f, 11.9f + dy, 19.6f, 9.4f, 4.7f, col);
+            circle(10.6f, 19.1f + dy, 4.3f, col);
+            circle(21.4f, 19.1f + dy, 4.3f, col);
+        }
+        rrect(8.4f, 15.0f, 5.6f, 1.9f, 0.5f, HEX(0x3A3A40));       /* direcional */
+        rrect(10.25f, 13.15f, 1.9f, 5.6f, 0.5f, HEX(0x3A3A40));
+        line(14.5f, 14.2f, 15.4f, 14.2f, 0.7f, HEX(0xB4B0C8));      /* select e start */
+        line(16.6f, 14.2f, 17.5f, 14.2f, 0.7f, HEX(0xB4B0C8));
+        circle(19.8f, 16.9f, 1.45f, HEX(0xFF453A));                /* B */
+        circle(22.9f, 15.2f, 1.45f, HEX(0xFF9F0A));                /* A */
+        break;
+    case ICON_BOOK: {
+        /* Livro aberto num squircle laranja: as duas páginas são um polígono
+         * só (côncavo no meio, onde fica a lombada), com o miolo de papel
+         * aparecendo embaixo, linhas de texto e uma fita azul marcando a
+         * página. */
+        squircle(HEX(0xFFB547), HEX(0xE9781F));
+        float pages[12] = { 6, 9.6f, 16, 11.3f, 26, 9.6f, 26, 23.2f, 16, 24.8f, 6, 23.2f };
+        float under[12];
+        for (int k = 0; k < 12; k++) under[k] = pages[k] + (k & 1 ? 1.4f : 0);
+        poly(under, 6, ARGB(0x40, 0x6A3000));                      /* sombra */
+        for (int k = 0; k < 12; k++) under[k] = pages[k] + (k & 1 ? 0.8f : 0);
+        poly(under, 6, HEX(0xEADFCB));                             /* miolo */
+        poly(pages, 6, HEX(0xFFFDF8));
+        line(16, 11.5f, 16, 24.6f, 0.6f, HEX(0xD8C9B0));           /* lombada */
+        for (int k = 0; k < 4; k++) {
+            /* linhas inclinadas como a borda da página; as de cima param antes da fita */
+            float d = k * 2.6f, end = k < 2 ? 21.6f : 23.7f;
+            line(8.3f, 13.5f + d, 13.9f, 14.5f + d, 0.75f, HEX(0xC4B59C));
+            line(18.1f, 14.5f + d, end, 14.5f + d - (end - 18.1f) * 0.17f, 0.75f, HEX(0xC4B59C));
+        }
+        float ribbon[10] = { 22.4f, 10.2f, 24.0f, 9.9f, 24.0f, 17.6f, 23.2f, 16.7f, 22.4f, 17.6f };
+        poly(ribbon, 5, HEX(0x0A84FF));
+        break;
+    }
     case ICON_TERMINAL: {
         /* Uma peça só de grafite, sem moldura: o prompt ">_" escrito direto
          * nela, na metade de cima, onde fica a primeira linha de um terminal.

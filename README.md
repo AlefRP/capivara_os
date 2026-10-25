@@ -57,7 +57,8 @@ de C e assembly, comentadas em português.
 | | Aplicativo | O que faz |
 |:-:|---|---|
 | <img src="docs/img/icones/explorador.png" width="40" alt=""> | **Explorador de Arquivos** | navega nas pastas, cria, renomeia, copia e apaga; Lixeira e arquivos ocultos |
-| <img src="docs/img/icones/terminal.png" width="40" alt=""> | **Terminal** | uns 35 comandos: `ls`, `cd`, `cat`, `tree`, `ps`, `kill`, `sysinfo`, `dmesg`, `tema`... |
+| <img src="docs/img/icones/terminal.png" width="40" alt=""> | **Terminal** | uns 45 comandos: `ls`, `cd`, `cat`, `tree`, `ps`, `kill`, `sysinfo`, `dmesg`, `som`, os laboratórios do OSTEP... |
+| <img src="docs/img/icones/estudos.png" width="40" alt=""> | **Estudos** | guia para estudar o livro [OSTEP](docs/ostep.md) com o Capivara: capítulo por capítulo, com o código e experimentos |
 | <img src="docs/img/icones/bloco-de-notas.png" width="40" alt=""> | **Bloco de Notas** | editor de texto UTF-8, com abrir e salvar |
 | <img src="docs/img/icones/calculadora.png" width="40" alt=""> | **Calculadora** | calculadora padrão, com vírgula decimal |
 | <img src="docs/img/icones/paint.png" width="40" alt=""> | **Paint** | pincel, borracha e paleta; abre e salva BMP |
@@ -76,7 +77,7 @@ de C e assembly, comentadas em português.
 | 🧠 Memória | alocador físico (bitmap), paginação de 4 níveis, *physmap*, heap `kmalloc` |
 | ⚙️ CPU | GDT/TSS, IDT, exceções com tela de erro e pilha de chamadas, SSE com FXSAVE por tarefa |
 | 🔀 Tarefas | escalonador preemptivo round-robin (1 kHz), sleep, mutex, filas de eventos, finalizar tarefa |
-| 🔌 Drivers | serial, PIT, PIC, PS/2 (teclado ABNT2/EUA com acentos, mouse com roda), RTC, PCI, ACPI (desligar), reiniciar |
+| 🔌 Drivers | serial, PIT, PIC, PS/2 (teclado ABNT2/EUA com acentos, mouse com roda), RTC, PCI, ACPI (desligar), reiniciar, som AC'97 (48 kHz por DMA) |
 | 🖥️ Máquinas virtuais | mouse absoluto no QEMU (vmmouse) e no VirtualBox (VMMDev), sem precisar "capturar" o cursor |
 | 📁 Arquivos | ramfs com pastas e arquivos, initrd em tar carregado pelo GRUB, Lixeira com restauração, imagens BMP |
 | 🍎 Visual (estilo macOS) | barra de menus global, Dock com ampliação, botões vermelho/amarelo/verde, Launchpad, Pesquisa, Central de Controle, tema claro/escuro, 6 papéis de parede |
@@ -148,14 +149,15 @@ kernel/
   boot/          leitura das informações do GRUB (Multiboot2)
   mm/            pmm (memória física), vmm (paginação), heap (kmalloc)
   sched/         task (escalonador, mutex), event (filas de eventos)
-  dev/           serial, ps2, keyboard, mouse, rtc, pci, power (ACPI), vbox, input
+  dev/           serial, ps2, keyboard, mouse, rtc, pci, power (ACPI), vbox, input, ac97 (som)
   fs/            vfs (ramfs + initrd tar)
   gui/           gfx (desenho), font, icons, theme, wm (compositor), ui (componentes), bmp, wallpaper
   apps/          shell (barra de menus, Dock, Launchpad...), explorer, terminal, notepad,
-                 calc, paint, photos, taskmgr, settings, session, notify, trash
+                 calc, paint, photos, taskmgr, settings, session, notify, trash,
+                 estudos (guia do OSTEP), ostep (os laboratórios do Terminal)
   main.c         kmain: a ordem de inicialização de tudo
 docs/            guias, arquitetura, processo clean room e especificações
-rootfs/          arquivos que vão para o initrd (aparecem em /home/usuario)
+rootfs/          arquivos que vão para o initrd (aparecem em /home/usuario), com o guia do OSTEP
 tests/           roteiros de teste automático (QEMU sem tela)
 tools/           fonte, initrd, testes no QEMU e o gerador das imagens da documentação
 build.sh         build no Linux/macOS/WSL (build.ps1: o mesmo no PowerShell)
@@ -173,6 +175,8 @@ Por onde começar a ler o código, e como as peças se encaixam, está em
 | 🛠️ [Como compilar](docs/compilar.md) | Windows, Linux e macOS; com container ou nativo |
 | 💾 [Pendrive bootável](docs/pendrive.md) | gravar, dar boot e o que esperar em hardware real |
 | 🧼 [Clean room](docs/clean-room.md) | como o sistema foi feito sem copiar código de ninguém |
+| 🧩 [Programas extras](docs/extras.md) | programas de fora do repositório que entram só no seu build |
+| 📚 [Estudando o OSTEP](docs/ostep.md) | o livro *Operating Systems: Three Easy Pieces* capítulo por capítulo, no código e nos laboratórios |
 | 📐 [Especificações](docs/spec/) | boot e memória, interrupções e tarefas, interface gráfica |
 
 ## 🤖 Testes automáticos e Claude Code
@@ -198,7 +202,8 @@ Por onde começar a ler o código, e como as peças se encaixam, está em
 2. **Disco**: driver ATA/AHCI e um sistema de arquivos persistente (FAT32 ou ext2).
 3. **Hardware real**: APIC/IOAPIC, USB (XHCI) para teclado e mouse, várias CPUs.
 4. **Rede**: placa e1000/virtio-net, ARP, IP, UDP, TCP, DHCP.
-5. **Interface**: fonte vetorial (rasterizador TrueType próprio), imagens PNG, som.
+5. **Interface**: fonte vetorial (rasterizador TrueType próprio), imagens PNG,
+   som em hardware real (Intel HD Audio).
 
 ## 📜 Licenças de terceiros
 

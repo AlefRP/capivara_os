@@ -67,20 +67,40 @@ ensure_image() {
     fi
 }
 
-# Roda um comando dentro do container, com o projeto montado em /src
+# Roda um comando dentro do container, com o projeto montado em /src. As
+# opções do container vão sendo empilhadas em "$@" (set --), que guarda cada
+# uma inteira, mesmo com espaços.
 container() {
+    cmd="$*"
     ENG=$(engine) || die "não achei as ferramentas nativas nem Docker/Podman. Veja docs/compilar.md"
     ensure_image
-    vol="$SRC:/src"
-    opts=""
-    if [ "$ENG" = podman ]; then
-        vol="$SRC:/src:Z"        # :Z = rótulo do SELinux (Fedora); o podman sem root já mapeia o usuário
-    elif [ "$(uname -s)" = Linux ]; then
+    z=""
+    [ "$ENG" = podman ] && z=":Z"   # :Z = rótulo do SELinux (Fedora); o podman sem root já mapeia o usuário
+    set -- -v "$SRC:/src$z"
+    if [ "$ENG" != podman ] && [ "$(uname -s)" = Linux ]; then
         # no Linux, os arquivos gerados ficam com o seu usuário, e não com o root
-        opts="--user $(id -u):$(id -g) -e HOME=/tmp"
+        set -- "$@" --user "$(id -u):$(id -g)" -e HOME=/tmp
     fi
-    # shellcheck disable=SC2086
-    $ENG run --rm --platform linux/amd64 $opts -v "$vol" -w /src "$IMAGE" sh -c "$*"
+    # Extras (docs/extras.md): cada pasta do extras.local aparece em /extras/N.
+    # EXTRAS vai sempre, mesmo vazio, para o make não ler caminhos de fora.
+    extras=""
+    if [ -f extras.local ]; then
+        n=0
+        while IFS= read -r linha || [ -n "$linha" ]; do
+            d=$(printf '%s' "${linha%%#*}" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            [ -n "$d" ] || continue
+            case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) d=$(cygpath -m "$d") ;; esac
+            if [ ! -f "$d/capivara.mk" ]; then
+                echo "aviso: extra sem capivara.mk, ignorado: $d" >&2
+                continue
+            fi
+            set -- "$@" -v "$d:/extras/$n$z"
+            extras="$extras /extras/$n"
+            n=$((n + 1))
+        done < extras.local
+    fi
+    set -- "$@" -e "EXTRAS=${extras# }"
+    $ENG run --rm --platform linux/amd64 "$@" -w /src "$IMAGE" sh -c "$cmd"
 }
 
 build() {

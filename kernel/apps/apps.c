@@ -5,8 +5,9 @@
 #include "lib/string.h"
 #include "gui/wm.h"
 #include "mm/heap.h"
+#include "lib/printf.h"
 
-const app_info_t app_list[] = {
+static const app_info_t system_apps[] = {
     { "explorer", "Explorador de Arquivos", "Navegue pelas suas pastas", ICON_EXPLORER, explorer_main, true },
     { "terminal", "Terminal", "Linha de comando", ICON_TERMINAL, terminal_main, true },
     { "notepad", "Bloco de Notas", "Editor de texto", ICON_NOTEPAD, notepad_main, true },
@@ -15,9 +16,26 @@ const app_info_t app_list[] = {
     { "fotos", "Fotos", "Visualizador de imagens", ICON_PHOTOS, photos_main, true },
     { "captura", "Ferramenta de Captura", "Capturar a tela (Super+Shift+S)", ICON_SNIP, snip_main, false },
     { "taskmgr", "Gerenciador de Tarefas", "Processos e desempenho", ICON_TASKMGR, taskmgr_main, false },
+    { "estudos", "Estudos", "Guia do livro OSTEP, com laboratórios", ICON_BOOK, estudos_main, true },
     { "settings", "Configurações", "Tema, papel de parede, sistema", ICON_SETTINGS, settings_main, true },
 };
-const int app_count = sizeof(app_list) / sizeof(app_list[0]);
+
+#define APP_MAX 32
+app_info_t app_list[APP_MAX];
+int app_count;
+
+/* Começo e fim da seção .extra_apps: o linker define os dois símbolos. */
+extern const app_info_t __extra_apps_start[], __extra_apps_end[];
+
+void apps_init(void) {
+    app_count = 0;
+    for (unsigned i = 0; i < sizeof(system_apps) / sizeof(system_apps[0]); i++)
+        app_list[app_count++] = system_apps[i];
+    for (const app_info_t *a = __extra_apps_start; a < __extra_apps_end && app_count < APP_MAX; a++) {
+        app_list[app_count++] = *a;
+        kprintf("apps: extra '%s'\n", a->id);
+    }
+}
 
 const app_info_t *app_find(const char *id) {
     for (int i = 0; i < app_count; i++)

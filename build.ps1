@@ -29,8 +29,28 @@ $root = $PSScriptRoot
 $image = "capivara-toolchain"
 $iso = Join-Path $root "build\capivara.iso"
 
+# Extras (docs\extras.md): pastas de fora do repositório listadas no
+# extras.local, uma por linha. No container, cada uma aparece em /extras/N.
+function Get-ExtraOptions {
+    $opts = @()
+    $dirs = @()
+    $file = Join-Path $root "extras.local"
+    if (Test-Path $file) {
+        foreach ($line in Get-Content $file) {
+            $d = ($line -replace '#.*$', '').Trim()
+            if (-not $d) { continue }
+            if (-not (Test-Path (Join-Path $d "capivara.mk"))) { Write-Warning "extra sem capivara.mk, ignorado: $d"; continue }
+            $opts += @("-v", "${d}:/extras/$($dirs.Count)")
+            $dirs += "/extras/$($dirs.Count)"
+        }
+    }
+    # sempre passa EXTRAS, mesmo vazio: assim o make não lê os caminhos do Windows
+    return $opts + @("-e", "EXTRAS=$($dirs -join ' ')")
+}
+
 function Invoke-Container([string]$cmd) {
-    docker run --rm --platform linux/amd64 -v "${root}:/src" -w /src $image sh -c $cmd
+    $extras = Get-ExtraOptions
+    docker run --rm --platform linux/amd64 -v "${root}:/src" @extras -w /src $image sh -c $cmd
     if ($LASTEXITCODE -ne 0) { throw "Falhou: $cmd" }
 }
 
@@ -59,9 +79,12 @@ function Start-VirtualBox {
         Write-Host "==> Criando a máquina virtual '$vm'"
         & $vbox createvm --name $vm --ostype Other_64 --register | Out-Null
         & $vbox modifyvm $vm --memory 512 --vram 32 --graphicscontroller vmsvga --ioapic on `
-            --firmware bios --mouse ps2 --keyboard ps2 --rtc-use-utc off --audio-enabled off | Out-Null
+            --firmware bios --mouse ps2 --keyboard ps2 --rtc-use-utc off | Out-Null
         & $vbox storagectl $vm --name "IDE" --add ide | Out-Null
     }
+    # som: a placa AC'97 é a que o kernel conhece (kernel\dev\ac97.c); VMs
+    # criadas antes do driver de som também passam a ter
+    & $vbox modifyvm $vm --audio-enabled on --audio-controller ac97 --audio-driver default --audio-out on | Out-Null
     & $vbox storageattach $vm --storagectl "IDE" --port 0 --device 0 --type dvddrive --medium $iso | Out-Null
     & $vbox startvm $vm | Out-Null
     Write-Host "==> VM iniciada. Clique dentro da janela para capturar o mouse (Ctrl direito solta)."
@@ -75,7 +98,7 @@ switch ($Acao) {
         Build-Iso
         $qemu = "C:\Program Files\qemu\qemu-system-x86_64.exe"
         if (-not (Test-Path $qemu)) { throw "QEMU não encontrado. Instale com: winget install SoftwareFreedomConservancy.QEMU" }
-        & $qemu -m 512M -cdrom $iso -rtc base=localtime -serial stdio
+        & $qemu -m 512M -cdrom $iso -rtc base=localtime -serial stdio -audiodev dsound,id=som -device AC97,audiodev=som
     }
     "test"  {
         Build-Iso
