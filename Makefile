@@ -47,6 +47,12 @@ CFLAGS_BASE := -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter \
 	-fno-asynchronous-unwind-tables -fno-math-errno \
 	-Ikernel -MMD -MP
 
+# Número da versão (kernel/version.h). O release.yml passa VERSAO=X.Y.N;
+# sem ele, o sistema se apresenta como "X.Y-dev".
+ifdef VERSAO
+  CFLAGS_BASE += -DCAPIVARA_VERSION='"$(VERSAO)"'
+endif
+
 # Núcleo: proibido usar registradores SSE, porque este código também roda dentro
 # de interrupções (e não salvamos o estado SSE ao entrar numa interrupção).
 CFLAGS_CORE := $(CFLAGS_BASE) -mgeneral-regs-only

@@ -85,5 +85,8 @@ de capturas de tela.
   interface. As capturas viram artefatos da execução.
 - `.github/workflows/toolchain.yml`: reconstrói o container de ferramentas
   quando `docker/` muda, e uma vez por mês.
-- `.github/workflows/release.yml`: uma tag `vX.Y.Z` publica a ISO numa Release
-  (skill `publicar-versao`).
+- `.github/workflows/release.yml`: quando o CI termina verde num push para
+  `main`, cria a tag `vX.Y.N` e publica a ISO numa Release. X.Y é
+  `CAPIVARA_SERIE` em `kernel/version.h`; N é `git rev-list --count HEAD`.
+  Ou seja: **todo push para `main` é público**. Mudar de série: skill
+  `publicar-versao`.

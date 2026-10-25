@@ -1,31 +1,59 @@
-# Publica uma versão: ao enviar uma tag vX.Y.Z, compila a ISO, testa o boot
-# e cria uma Release no GitHub com a ISO pronta para baixar e gravar num
-# pendrive (docs/pendrive.md). A tag precisa bater com kernel/version.h.
+# Publica uma versão a cada commit em main: quando o CI termina verde num push
+# para main, este workflow compila a ISO com o número da versão, testa o boot
+# e cria a tag e a Release no GitHub com a ISO pronta para baixar e gravar
+# num pendrive (docs/pendrive.md).
+#
+# O número é vX.Y.N: X.Y é CAPIVARA_SERIE em kernel/version.h e N é o número
+# do commit (git rev-list --count HEAD), que só cresce. Se vários commits
+# chegam num push só, sai uma Release, a do último.
 name: Release
 
 on:
-  push:
-    tags: ["v*.*.*"]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+# Uma Release de cada vez, na ordem dos commits (nenhuma é cancelada).
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
+    # Só depois de um CI verde disparado por push (pull request não publica nada).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0       # o histórico inteiro, para contar os commits e achar a tag anterior
 
-      - name: Confere a versão
+      - name: Número da versão
+        id: versao
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          versao=$(sed -n 's/^#define CAPIVARA_VERSION "\(.*\)"/\1/p' kernel/version.h)
-          echo "kernel/version.h: $versao | tag: $GITHUB_REF_NAME"
-          if [ "v$versao" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::A tag $GITHUB_REF_NAME não bate com CAPIVARA_VERSION ($versao) em kernel/version.h"
-            exit 1
+          serie=$(sed -n 's/^#define CAPIVARA_SERIE "\(.*\)"/\1/p' kernel/version.h)
+          versao="$serie.$(git rev-list --count HEAD)"
+          echo "versao=$versao" >> "$GITHUB_OUTPUT"
+          echo "tag=v$versao" >> "$GITHUB_OUTPUT"
+          echo "Versão: $versao (commit $(git rev-parse --short HEAD))"
+          # Rodar de novo o mesmo commit não duplica a Release.
+          if gh release view "v$versao" >/dev/null 2>&1; then
+            echo "::notice::A Release v$versao já existe; nada a fazer."
+            echo "existe=sim" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Instala as ferramentas
+        if: steps.versao.outputs.existe != 'sim'
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -33,15 +61,17 @@ jobs:
             qemu-system-x86 ovmf imagemagick
 
       - name: Compila a ISO
-        run: MODO=nativo sh build.sh
+        if: steps.versao.outputs.existe != 'sim'
+        run: VERSAO=${{ steps.versao.outputs.versao }} MODO=nativo sh build.sh
 
       - name: Testa o boot (pendrive UEFI e CD BIOS)
+        if: steps.versao.outputs.existe != 'sim'
         run: |
           python3 tools/qemu-test.py tests/boot.txt --usb --uefi --out build/test/pendrive-uefi
           python3 tools/qemu-test.py tests/boot.txt --out build/test/cd-bios
 
       - name: Guarda as capturas
-        if: always()
+        if: always() && steps.versao.outputs.existe != 'sim'
         uses: actions/upload-artifact@v7
         with:
           name: telas-release
@@ -49,16 +79,29 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publica a Release
+        if: steps.versao.outputs.existe != 'sim'
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.versao.outputs.tag }}
         run: |
-          iso="capivara-os-$GITHUB_REF_NAME.iso"
+          iso="capivara-os-$TAG.iso"
           cp build/capivara.iso "$iso"
           sha256sum "$iso" > "$iso.sha256"
+          # O que mudou: os commits desde a Release anterior (ou só este, na primeira).
+          anterior=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
+          if [ -n "$anterior" ]; then
+            mudancas=$(git log --format='- %s (%h)' "$anterior..HEAD")
+          else
+            mudancas=$(git log -1 --format='- %s (%h)')
+          fi
           cat > notas.md <<EOF
-          ISO híbrida do Capivara OS $GITHUB_REF_NAME: serve para máquina virtual e para
+          ISO híbrida do Capivara OS $TAG: serve para máquina virtual e para
           gravar num pendrive (dá boot por BIOS e por UEFI; desligue o Secure Boot).
-          Como gravar e o que esperar em hardware real: [docs/pendrive.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/pendrive.md).
+          Como gravar e o que esperar em hardware real: [docs/pendrive.md](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/docs/pendrive.md).
+
+          ## O que mudou
+
+          $mudancas
           EOF
-          gh release create "$GITHUB_REF_NAME" "$iso" "$iso.sha256" \
-            --title "Capivara OS $GITHUB_REF_NAME" --notes-file notas.md --generate-notes
+          gh release create "$TAG" "$iso" "$iso.sha256" --target "$(git rev-parse HEAD)" \
+            --title "Capivara OS $TAG" --notes-file notas.md

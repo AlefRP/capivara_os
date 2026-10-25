@@ -180,7 +180,8 @@ Por onde começar a ler o código, e como as peças se encaixam, está em
 - **GitHub Actions:** a cada push, a ISO é compilada em Ubuntu, Fedora e Arch.
   Depois, ela dá boot no QEMU como CD e como pendrive, por BIOS e por UEFI, e os
   roteiros da interface rodam sozinhos. As capturas de tela ficam nos
-  artefatos de cada execução. Uma tag `vX.Y.Z` publica a ISO pronta numa
+  artefatos de cada execução. Cada commit em `main` que passa no CI vira uma
+  versão `vX.Y.N` (N é o número do commit), com a tag e a ISO pronta numa
   [Release](https://github.com/AlefRP/capivara_os/releases).
 - **Claude Code:** o [CLAUDE.md](CLAUDE.md) traz as regras do projeto (clean
   room, sem libc, sem float no núcleo...). Em [.claude/](.claude/) há o

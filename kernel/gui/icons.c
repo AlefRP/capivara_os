@@ -123,15 +123,16 @@ static void logo(void) {
     tri(8.6f, 2.9f, 11.2f, 1.6f, 10.4f, 3.6f, HEX(0x5E9E48));
 }
 
-/* O ">_" do Terminal: divisa de pontas retas e o cursor, deslocados de (dx, dy). */
+/* O ">_" do Terminal: divisa de pontas retas e o cursor, deslocados de (dx, dy).
+ * O cursor fica alinhado com a base da divisa, como numa linha de texto. */
 static void prompt(float dx, float dy, uint32_t chev, uint32_t cursor) {
-    float p[12] = { 8.0f, 7.6f, 13.0f, 11.1f, 8.0f, 14.6f, 8.0f, 12.65f, 10.21f, 11.1f, 8.0f, 9.55f };
+    float p[12] = { 9.2f, 8.8f, 14.8f, 12.7f, 9.2f, 16.6f, 9.2f, 14.7f, 12.07f, 12.7f, 9.2f, 10.7f };
     for (int i = 0; i < 12; i += 2) {
         p[i] += dx;
         p[i + 1] += dy;
     }
     poly(p, 6, chev);
-    rrect(14.0f + dx, 13.0f + dy, 5.6f, 1.6f, 0.3f, cursor);
+    rrect(16.4f + dx, 15.0f + dy, 6.4f, 1.6f, 0.3f, cursor);
 }
 
 /* Tecla da calculadora: redonda (ou pílula), com degradê e a lateral mais
@@ -226,25 +227,21 @@ void icon_draw(canvas_t *c, int icon, int x, int y, int size) {
         rrect(8, 15, 16, 9, 2, HEX(0xE4F1FF));
         break;
     case ICON_TERMINAL: {
-        /* Um monitorzinho: moldura preta com espessura cinza embaixo, tela
-         * embutida um tom mais clara e o prompt ">_" com o cursor laranja. */
+        /* Uma peça só de grafite, sem moldura: o prompt ">_" escrito direto
+         * nela, na metade de cima, onde fica a primeira linha de um terminal.
+         * Espessura cinza embaixo, fio de luz no topo e o cursor laranja, que
+         * é a marca do Terminal do Capivara. */
         rrect(2.5f, 4.2f, 27, 26.4f, 6.7f, ARGB(0x10, 0x000000));
         rrect(2.8f, 3.8f, 26.4f, 26.2f, 6.4f, ARGB(0x1C, 0x000000));
-        rrect(3, 3.45f, 26, 26, 6.2f, HEX(0x55555B));
-        grad(3, 3, 26, 26, 6.2f, HEX(0x2A2A2E), HEX(0x09090A));
-        outline_top(3, 3, 26, 26, 6.2f, 11, ARGB(0x50, 0xD6E4F0));
-        /* tela: um sulco escuro em volta, degradê e um fio de luz na borda */
-        int sx = (int)(X(5.4f) + 0.5f), sy = (int)(Y(5.4f) + 0.5f), sw = (int)(S(21.2f) + 0.5f);
-        float sr = S(4.0f);
-        gfx_round_fill(C, sx - 1, sy - 1, sw + 2, sw + 2, sr + 1, ARGB(0xC0, 0x000000));
-        gfx_round_gradient(C, sx, sy, sw, sw, sr, HEX(0x323236), HEX(0x1A1A1C));
-        gfx_round_rect(C, sx, sy, sw, sw, sr, ARGB(0x1A, 0xFFFFFF));
+        rrect(3, 3.45f, 26, 26, 6.2f, HEX(0x4A4A50));
+        grad(3, 3, 26, 26, 6.2f, HEX(0x313136), HEX(0x0C0C0E));
+        outline_top(3, 3, 26, 26, 6.2f, 11, ARGB(0x58, 0xD6E4F0));
         /* sombra difusa do prompt: a mesma forma, transparente, espalhada num disco */
         for (int i = 0; i < 8; i++) {
             float a = i * GFX_PI / 4;
-            prompt(0.35f + 0.6f * gfx_cos(a), 0.8f + 0.6f * gfx_sin(a), ARGB(0x16, 0x000000), ARGB(0x16, 0x000000));
+            prompt(0.35f + 0.6f * gfx_cos(a), 0.8f + 0.6f * gfx_sin(a), ARGB(0x18, 0x000000), ARGB(0x18, 0x000000));
         }
-        rrect(13.6f, 12.6f, 6.4f, 2.4f, 0.8f, ARGB(0x30, 0xFF9F0A));     /* brilho do cursor */
+        rrect(16.0f, 14.6f, 7.2f, 2.4f, 0.8f, ARGB(0x30, 0xFF9F0A));     /* brilho do cursor */
         prompt(0, 0, HEX(0xF5F5F7), HEX(0xFF9F0A));
         break;
     }
