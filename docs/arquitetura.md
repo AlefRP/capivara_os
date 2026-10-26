@@ -151,6 +151,14 @@ GRUB carrega junto com o kernel, e o `vfs_load_initrd` o desempacota.
 
 ## 📖 Ordem sugerida de leitura
 
+O motor [Tatu DB](tatu.md) segue outra cadeia didática:
+`lexer → parser → árvore → plano → operadores → armazenamento`. A aplicação
+[Toca](../kernel/apps/toca.c) usa a API de `kernel/tatu/tatu.h`; o motor não
+depende da interface. Um mutex serializa as chamadas, arenas liberam os
+temporários de cada execução e um diário desfaz mutações em caso de erro
+ou `ROLLBACK`. Os arquivos JSON são gravados no ramfs; durabilidade em
+disco continua sendo uma etapa futura do sistema.
+
 1. [`arch/x86_64/boot.S`](../kernel/arch/x86_64/boot.S) → [`main.c`](../kernel/main.c):
    do GRUB até a primeira linha em C.
 2. [`mm/pmm.c`](../kernel/mm/pmm.c) → [`mm/vmm.c`](../kernel/mm/vmm.c) → [`mm/heap.c`](../kernel/mm/heap.c):

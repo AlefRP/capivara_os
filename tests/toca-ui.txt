@@ -1,0 +1,95 @@
+# Toca: catálogo, estrutura, histórico, erros, arquivos, CSV e tamanho mínimo.
+# Maximizar fixa as coordenadas do cliente: x=1, y=55 em 1024x768.
+waitlog kmain: pronto
+sleep 4
+key ret
+sleep 3
+key alt-f4
+sleep 1
+key meta_l-spc
+sleep 1
+type Toca
+key ret
+waitlog toca: cliente pronto
+sleep 2
+key meta_l-up
+sleep 2
+shot 01-bancada
+
+# Abrir os dados de uma tabela pelo catálogo e inspecionar suas colunas.
+click 100 368
+sleep 1
+click 370 390
+waitlog toca: aba estrutura
+sleep 1
+shot 02-estrutura
+click 480 390
+waitlog toca: aba histórico
+sleep 1
+shot 03-historico
+
+# Um erro deve ser legível e uma consulta seguinte deve recuperar a bancada.
+click 450 240
+key ctrl-a
+type SELECT nome FROM faltando;
+key ctrl-ret
+waitlog toca: consulta com erro
+sleep 1
+shot 04-erro
+key ctrl-a
+type SELECT 'Capivara' AS animal, 42 AS resposta;
+key ctrl-ret
+waitlog toca: consulta concluída (1 linhas, 2 colunas)
+sleep 1
+shot 05-recuperacao
+
+# Salvar a consulta, o banco inteiro e o resultado em CSV, cada um separado.
+key ctrl-s
+sleep 1
+key ret
+waitlog toca: consulta salva
+sleep 1
+key ctrl-shift-s
+sleep 1
+key ret
+waitlog toca: banco salvo
+sleep 1
+click 128 13
+sleep 1
+key down
+key down
+key down
+key down
+key down
+key down
+key down
+key ret
+sleep 1
+key ret
+waitlog toca: CSV exportado
+sleep 1
+shot 06-arquivos-salvos
+
+# Criar um banco separado e depois reabrir o primeiro arquivo salvo.
+key ctrl-n
+sleep 1
+key ret
+waitlog toca: banco criado
+sleep 1
+key ctrl-ret
+sleep 1
+shot 07-banco-novo
+key ctrl-o
+sleep 1
+type laboratorio.tatu
+key ret
+waitlog toca: banco aberto
+sleep 1
+shot 08-banco-reaberto
+
+# Restaurar e reduzir até o mínimo (740x480), depois conferir a captura.
+key meta_l-down
+sleep 1
+drag 1022 692 823 576
+sleep 2
+shot 09-tamanho-minimo

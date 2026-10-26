@@ -178,7 +178,7 @@ static void generate_wallpaper(void) {
 /* ================================================================== */
 /* Área de trabalho (ícones à direita, de cima para baixo)             */
 /* ================================================================== */
-#define DESK_FOLDER "/home/usuario/Área de Trabalho"
+#define DESK_FOLDER DESKTOP_DIR
 #define CELL_W 100
 #define CELL_H 92
 
@@ -211,6 +211,8 @@ static void scan_desktop(void) {
         desk_icon_t *d = &dicons[ndicons++];
         memset(d, 0, sizeof(*d));
         strlcpy(d->label, n->name, sizeof(d->label));
+        char *ext = strrchr(d->label, '.');
+        if (ext && !strcmp(ext, ".app")) *ext = 0;      /* atalho: só o nome do app */
         d->icon = app_icon_for(n->name, n->type == VFS_DIR);
         d->file = true;
         snprintf(d->path, sizeof(d->path), "%s/%s", DESK_FOLDER, n->name);

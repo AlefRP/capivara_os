@@ -55,9 +55,28 @@ static void jogo_main(void *arg) {
     /* win_create, gui_poll/gui_wait, win_canvas, win_invalidate... */
 }
 
-/*        variável   id      nome       descrição      ícone      função     no Dock? */
-EXTRA_APP(jogo_app, "jogo", "Meu Jogo", "Um jogo meu", ICON_GAME, jogo_main, true);
+extern const icon_image_t icone_do_jogo;      /* opcional, veja abaixo */
+
+EXTRA_APP(jogo_app,
+          /*      id      nome       descrição      ícone      função     no Dock? */
+          .app = { "jogo", "Meu Jogo", "Um jogo meu", ICON_GAME, jogo_main, true },
+          .image = &icone_do_jogo,            /* opcional: ícone de imagem */
+          .desktop = true);                   /* opcional: atalho na área de trabalho */
 ```
+
+**Ícone próprio.** Os ícones do sistema são desenhados em código
+([icons.c](../kernel/gui/icons.c)), mas um extra pode trazer a arte dele: um
+`icon_image_t` com uma imagem quadrada ARGB de 32 bits (128×128 é um bom
+tamanho). No boot, `icon_from_image` dá um número de ícone para ela, e o
+sistema reduz a imagem com média de área para cada lugar (lista, Dock,
+Launchpad, área de trabalho). Sem `.image`, vale o ícone do `.app`. Para
+achar o número dentro do programa (para a janela, por exemplo), use
+`app_find("jogo")->icon`.
+
+**Atalho na área de trabalho.** Com `.desktop = true`, o boot cria
+`Meu Jogo.app` em Área de Trabalho. Um arquivo `.app` é um atalho: guarda o id
+do app, aparece com o ícone dele e abre o app no clique duplo. Dá para
+apagá-lo como qualquer arquivo.
 
 Um extra pode usar qualquer função do kernel: `audio_write` e
 `audio_queued` ([dev/audio.h](../kernel/dev/audio.h)) para som, `timer_ms`

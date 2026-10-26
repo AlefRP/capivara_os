@@ -60,13 +60,14 @@ CFLAGS_CORE := $(CFLAGS_BASE) -mgeneral-regs-only
 # Interface gráfica e aplicativos: SSE liberado (contas com float para
 # antisserrilhado). Só rodam em contexto de tarefa, e o escalonador salva o
 # estado SSE de cada tarefa com FXSAVE/FXRSTOR.
+# O motor Tatu usa REAL e roda somente em tarefas, com as mesmas opções.
 CFLAGS_GUI  := $(CFLAGS_BASE) -msse2
 
 LDFLAGS := -T kernel/linker.ld -nostdlib -z max-page-size=0x1000 -z noexecstack
 
 CORE_SRC := $(wildcard kernel/*.c kernel/arch/x86_64/*.c kernel/lib/*.c \
 	kernel/mm/*.c kernel/dev/*.c kernel/sched/*.c kernel/fs/*.c kernel/boot/*.c)
-GUI_SRC  := $(wildcard kernel/gui/*.c kernel/apps/*.c)
+GUI_SRC  := $(wildcard kernel/gui/*.c kernel/apps/*.c kernel/tatu/*.c)
 ASM_SRC  := $(wildcard kernel/arch/x86_64/*.S)
 
 CORE_OBJ := $(CORE_SRC:%.c=$(OBJ)/%.o)

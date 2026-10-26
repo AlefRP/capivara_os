@@ -26,8 +26,8 @@ Com o nome do maior roedor do mundo, bicho bem brasileiro. 🍊
 
 O Capivara OS é um sistema operacional **mínimo e didático**. Ele tem kernel
 próprio de 64 bits, drivers, interface gráfica com **visual no estilo do macOS
-e recursos do Windows**, e uma dúzia de aplicativos. São cerca de 14 mil linhas
-de C e assembly, comentadas em português.
+e recursos do Windows**, aplicativos nativos e um motor SQL educacional.
+O código em C e assembly é comentado em português.
 
 - 🌱 **Escrito do zero.** Não é baseado em Linux nem em nenhum outro sistema:
   o kernel, os drivers, a interface e os apps são código próprio.
@@ -59,6 +59,7 @@ de C e assembly, comentadas em português.
 | <img src="docs/img/icones/explorador.png" width="40" alt=""> | **Explorador de Arquivos** | navega nas pastas, cria, renomeia, copia e apaga; Lixeira e arquivos ocultos |
 | <img src="docs/img/icones/terminal.png" width="40" alt=""> | **Terminal** | uns 45 comandos: `ls`, `cd`, `cat`, `tree`, `ps`, `kill`, `sysinfo`, `dmesg`, `som`, os laboratórios do OSTEP... |
 | <img src="docs/img/icones/estudos.png" width="40" alt=""> | **Estudos** | guia para estudar o livro [OSTEP](docs/ostep.md) com o Capivara: capítulo por capítulo, com o código e experimentos |
+| <img src="docs/img/icones/toca.png" width="40" alt=""> | **Toca · Tatu DB** | [cliente SQL próprio](docs/tatu.md), com editor, tabelas, grade de resultados e transações; arquivos em RAM |
 | <img src="docs/img/icones/bloco-de-notas.png" width="40" alt=""> | **Bloco de Notas** | editor de texto UTF-8, com abrir e salvar |
 | <img src="docs/img/icones/calculadora.png" width="40" alt=""> | **Calculadora** | calculadora padrão, com vírgula decimal |
 | <img src="docs/img/icones/paint.png" width="40" alt=""> | **Paint** | pincel, borracha e paleta; abre e salva BMP |
@@ -151,6 +152,7 @@ kernel/
   sched/         task (escalonador, mutex), event (filas de eventos)
   dev/           serial, ps2, keyboard, mouse, rtc, pci, power (ACPI), vbox, input, ac97 (som)
   fs/            vfs (ramfs + initrd tar)
+  tatu/          motor SQL nativo: parser, plano, operadores, índices e transações
   gui/           gfx (desenho), font, icons, theme, wm (compositor), ui (componentes), bmp, wallpaper
   apps/          shell (barra de menus, Dock, Launchpad...), explorer, terminal, notepad,
                  calc, paint, photos, taskmgr, settings, session, notify, trash,

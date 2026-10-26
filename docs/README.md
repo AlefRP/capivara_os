@@ -10,6 +10,7 @@
 | 🏗️ | [Arquitetura](arquitetura.md) | quem quer **entender**: camadas, boot, memória, interrupções, o caminho de um clique |
 | 🛠️ | [Como compilar](compilar.md) | quem quer **gerar a ISO** no Windows, no Linux ou no macOS |
 | 💾 | [Pendrive bootável](pendrive.md) | quem quer **dar boot num PC de verdade** |
+| 🦔 | [Tatu DB e Toca](tatu.md) | banco SQL nativo, cliente gráfico, formato e limites de persistência |
 | 🧼 | [Clean room](clean-room.md) | como o sistema foi feito **sem copiar** código, ícones ou imagens |
 
 ## 📐 Especificações

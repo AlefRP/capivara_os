@@ -1,0 +1,24 @@
+Toca · seu banco, por dentro.
+
+Abra pelo atalho da área de trabalho, pelo Launchpad ou pela Pesquisa.
+O cliente começa com espécies de tatu, tatus e avistamentos de exemplo.
+
+Ctrl+Enter / F5: executar SQL (ou só o trecho selecionado).
+Ctrl+S: salvar consulta SQL.
+Ctrl+Shift+S: salvar o banco como arquivo .tatu.
+Ctrl+O: abrir banco .tatu.
+Ctrl+N: criar banco .tatu.
+
+Na lateral, clique numa tabela para ver seus dados. A aba Estrutura
+mostra as colunas; Histórico permite recuperar consultas da sessão.
+O menu Consulta permite iniciar, confirmar e desfazer transações.
+
+Os arquivos ficam na RAM e somem quando o Capivara reinicia.
+Salvar permite fechar e reabrir o banco durante esta sessão.
+Uma transação aberta é desfeita quando você fecha o banco.
+
+No Terminal, digite tatu e depois .help. Para carregar exemplos, .demo.
+Termine os comandos SQL com ;. Para voltar ao Terminal, .quit.
+
+Este port usa um motor em C, dentro do Capivara. O projeto original
+em Python continua separado no computador do autor.

@@ -1,0 +1,49 @@
+# Tatu DB: autotestes reais, shell SQL, cliente Toca e temas claro/escuro.
+waitlog kmain: pronto
+sleep 4
+key ret
+sleep 3
+key alt-f4
+sleep 1
+key meta_l-t
+sleep 3
+type tatu teste
+key ret
+waitlog tatu: testes OK 120
+sleep 1
+shot 01-motor
+type tatu
+key ret
+type .demo
+key ret
+sleep 1
+type SELECT apelido FROM tatus WHERE especie_id = 2;
+key ret
+sleep 1
+shot 02-shell
+type .quit
+key ret
+key alt-f4
+sleep 1
+key meta_l-spc
+sleep 1
+type Toca
+key ret
+sleep 4
+shot 03-toca-claro
+key ctrl-ret
+sleep 2
+shot 04-consulta
+key meta_l-t
+sleep 2
+type tema escuro
+key ret
+sleep 1
+key alt-f4
+sleep 2
+shot 05-toca-escuro
+key alt-f4
+sleep 1
+key meta_l
+sleep 2
+shot 06-launchpad

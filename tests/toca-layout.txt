@@ -1,0 +1,35 @@
+# Toca: prévia final, concorrência de ícones, janela mínima e tema escuro.
+waitlog kmain: pronto
+sleep 4
+key ret
+sleep 3
+key alt-f4
+sleep 1
+key meta_l-spc
+sleep 1
+type Toca
+key ret
+waitlog toca: cliente pronto
+sleep 3
+shot toca-claro
+key meta_l-up
+sleep 2
+# Tabela e estrutura: desenha ícones junto do Dock e da barra de menus.
+click 100 368
+sleep 1
+click 370 390
+sleep 1
+shot toca-estrutura
+key meta_l-down
+sleep 1
+drag 1022 692 823 576
+sleep 2
+shot toca-minimo
+key meta_l-t
+sleep 2
+type tema escuro
+key ret
+sleep 1
+key alt-f4
+sleep 2
+shot toca-escuro

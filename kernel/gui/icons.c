@@ -7,6 +7,20 @@
 #include "gui/gfx.h"
 #include "gui/theme.h"
 
+/* As primitivas abaixo dividem contexto de desenho. O escalonador pode
+ * alternar o Dock e um aplicativo no meio de um ícone: proteger toda a
+ * operação evita desenhar pedaços no canvas ou na escala de outra tarefa.
+ * O gerador de arte no host tem uma única thread. */
+#if !__STDC_HOSTED__
+#include "sched/task.h"
+static mutex_t draw_mutex;
+#define DRAW_LOCK() mutex_lock(&draw_mutex)
+#define DRAW_UNLOCK() mutex_unlock(&draw_mutex)
+#else
+#define DRAW_LOCK() ((void)0)
+#define DRAW_UNLOCK() ((void)0)
+#endif
+
 static canvas_t *C;
 static float ox, oy, sc;
 
@@ -142,11 +156,57 @@ static void key(float x, float y, float w, float h, uint32_t top, uint32_t botto
     grad(x, y, w, h, h / 2, top, bottom);
 }
 
-void icon_draw(canvas_t *c, int icon, int x, int y, int size) {
+#define MAX_IMAGES 16
+static const icon_image_t *images[MAX_IMAGES];
+static int nimages;
+
+int icon_from_image(const icon_image_t *img) {
+    for (int i = 0; i < nimages; i++)
+        if (images[i] == img) return ICON_IMAGE_BASE + i;
+    if (nimages == MAX_IMAGES) return ICON_FILE;
+    images[nimages] = img;
+    return ICON_IMAGE_BASE + nimages++;
+}
+
+/* A imagem ocupa o quadrado do squircle (3 a 29 na grade), com a mesma
+ * sombra. Para reduzir, cada pixel de destino é a média dos pixels da imagem
+ * que caem nele (média de área), com as cores pesadas pela opacidade: senão
+ * a borda transparente escureceria o contorno. Para ampliar, o mais próximo. */
+static void image_icon(const icon_image_t *img) {
+    rrect(2.6f, 3.8f, 26.8f, 26.8f, 6.6f, ARGB(0x16, 0x000000));
+    rrect(3, 3.6f, 26, 26.4f, 6.4f, ARGB(0x22, 0x000000));
+    int x0 = (int)(X(3) + 0.5f), y0 = (int)(Y(3) + 0.5f), d = (int)(S(26) + 0.5f), n = img->size;
+    for (int dy = 0; dy < d; dy++) {
+        int sy0 = dy * n / d, sy1 = (dy + 1) * n / d;
+        if (sy1 <= sy0) sy1 = sy0 + 1;
+        for (int dx = 0; dx < d; dx++) {
+            int sx0 = dx * n / d, sx1 = (dx + 1) * n / d;
+            if (sx1 <= sx0) sx1 = sx0 + 1;
+            uint32_t a = 0, r = 0, g = 0, b = 0, cnt = 0;
+            for (int sy = sy0; sy < sy1; sy++)
+                for (int sx = sx0; sx < sx1; sx++) {
+                    uint32_t p = img->argb[sy * n + sx], pa = p >> 24;
+                    a += pa;
+                    r += (p >> 16 & 0xFF) * pa;
+                    g += (p >> 8 & 0xFF) * pa;
+                    b += (p & 0xFF) * pa;
+                    cnt++;
+                }
+            if (a) gfx_pixel_cov(C, x0 + dx, y0 + dy, (a / cnt) << 24 | (r / a) << 16 | (g / a) << 8 | (b / a), 1.0f);
+        }
+    }
+}
+
+static void render_icon(canvas_t *c, int icon, int x, int y, int size) {
     C = c;
     ox = x;
     oy = y;
     sc = size / 32.0f;
+
+    if (icon >= ICON_IMAGE_BASE && icon < ICON_IMAGE_BASE + nimages) {
+        image_icon(images[icon - ICON_IMAGE_BASE]);
+        return;
+    }
 
     switch (icon) {
     case ICON_LOGO:
@@ -245,6 +305,25 @@ void icon_draw(canvas_t *c, int icon, int x, int y, int size) {
         circle(19.8f, 16.9f, 1.45f, HEX(0xFF453A));                /* B */
         circle(22.9f, 15.2f, 1.45f, HEX(0xFF9F0A));                /* A */
         break;
+    case ICON_TATU: {
+        /* A carapaça lembra o tatu e as faixas de um banco de dados. O
+         * verde-petróleo e a argila dão ao Toca uma identidade própria. */
+        squircle(HEX(0x478C83), HEX(0x174C47));
+        rrect(7, 23, 18, 2.6f, 1.3f, ARGB(0x38, 0x092824));
+        line(7, 20, 4.5f, 22, 1.3f, HEX(0xB78052));
+        rrect(9, 19, 2.3f, 4, 1, HEX(0xB78052));
+        rrect(19, 19, 2.3f, 4, 1, HEX(0xB78052));
+        grad(6.5f, 10, 17, 11.5f, 5.5f, HEX(0xF1D4A1), HEX(0xCC9C67));
+        for (int k = 0; k < 4; k++)
+            line(10.5f + k * 2.5f, 11.8f, 10.5f + k * 2.5f, 19.5f, 0.8f, HEX(0xAD7A4D));
+        float face[] = { 20, 15, 24.2f, 15, 27.1f, 18.2f, 25.4f, 20.6f, 20, 20.6f };
+        poly(face, 5, HEX(0xEBC38E));
+        rrect(21.3f, 11.5f, 2.0f, 5.5f, 1.0f, HEX(0xEBC38E));
+        circle(23.8f, 17.1f, 0.65f, HEX(0x253D35));
+        circle(26.2f, 18.9f, 0.65f, HEX(0x80583F));
+        line(9, 24.7f, 23, 24.7f, 0.7f, ARGB(0x90, 0xA3C8B4));
+        break;
+    }
     case ICON_BOOK: {
         /* Livro aberto num squircle laranja: as duas páginas são um polígono
          * só (côncavo no meio, onde fica a lombada), com o miolo de papel
@@ -425,7 +504,7 @@ void icon_draw(canvas_t *c, int icon, int x, int y, int size) {
     }
 }
 
-void glyph_draw(canvas_t *c, int glyph, int x, int y, int size, uint32_t col) {
+static void render_glyph(canvas_t *c, int glyph, int x, int y, int size, uint32_t col) {
     C = c;
     ox = x;
     oy = y;
@@ -593,4 +672,16 @@ void glyph_draw(canvas_t *c, int glyph, int x, int y, int size, uint32_t col) {
         line(9, 27, 23, 27, w, col);
         break;
     }
+}
+
+void icon_draw(canvas_t *c, int icon, int x, int y, int size) {
+    DRAW_LOCK();
+    render_icon(c, icon, x, y, size);
+    DRAW_UNLOCK();
+}
+
+void glyph_draw(canvas_t *c, int glyph, int x, int y, int size, uint32_t col) {
+    DRAW_LOCK();
+    render_glyph(c, glyph, x, y, size, col);
+    DRAW_UNLOCK();
 }

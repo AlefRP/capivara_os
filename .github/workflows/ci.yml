@@ -108,8 +108,12 @@ jobs:
       - name: Instala QEMU e ImageMagick
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-x86 imagemagick
       - name: Roteiros de teste
+        # O motor também roda no host com verificação de memória.
         run: |
-          for roteiro in gui recursos terminal ostep; do
+          sh tools/tatu/test-host.sh
+          sh tools/tatu/test-storage.sh
+          sh tools/tatu/test-oom.sh
+          for roteiro in gui recursos terminal ostep tatu toca-ui; do
             echo "::group::tests/$roteiro.txt"
             python3 tools/qemu-test.py tests/$roteiro.txt --out build/test/$roteiro
             echo "::endgroup::"

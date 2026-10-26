@@ -1,5 +1,6 @@
 # Capturas de tela da documentação (docs/img/telas). Para gerar de novo:
 #   sh build.sh test tests/readme.txt --out docs/img/telas
+# Toca: sh build.sh test tests/toca-layout.txt --out docs/img/telas
 waitlog kmain: pronto
 sleep 4
 shot bloqueio

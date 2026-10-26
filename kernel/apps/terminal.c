@@ -22,6 +22,7 @@
 #include "apps/trash.h"
 #include "apps/ostep.h"
 #include "gui/wm.h"
+#include "tatu/tatu.h"
 
 #define MAX_COLS   160
 #define MAX_LINES  600
@@ -49,6 +50,7 @@ typedef struct {
     char history[32][256];
     int hist_n, hist_pos;
     vnode_t *cwd;
+    tatu_shell_t *tatu;
     bool cursor_on;
     bool quit;
     rect_t cursor_rect;         /* onde o cursor foi desenhado (para piscar barato) */
@@ -96,6 +98,7 @@ static void cwd_display(term_t *t, char *out, size_t size) {
 }
 
 static void prompt(term_t *t) {
+    if (t->tatu) { printc(t, C_YELLOW, "%s", tatu_shell_prompt(t->tatu)); return; }
     char p[VFS_PATH_MAX];
     cwd_display(t, p, sizeof(p));
     printc(t, C_GREEN, "usuario@capivara");
@@ -387,6 +390,7 @@ static void help(term_t *t) {
         { "tema [claro|escuro]", "mostra/troca o tema" },
         { "som [teste|volume N]", "placa de som: testa ou muda o volume" },
         { "ostep", "laboratórios do livro OSTEP (escalonar, heap...)" },
+        { "tatu [arquivo|teste]", "banco SQL do Tatu DB (.help para ajuda)" },
         { "notificar <texto>", "mostra uma notificação" }, { "captura", "salva a tela em Imagens" },
         { "lixeira [esvaziar]", "lista ou esvazia a Lixeira" }, { "bloquear", "tela de bloqueio" },
         { "reiniciar / desligar", "energia" }, { "exit", "fecha o terminal" },
@@ -399,6 +403,12 @@ static void help(term_t *t) {
 }
 
 static void run(term_t *t, char *line) {
+    /* O SQL precisa chegar inteiro ao parser: aspas e > pertencem ao SQL,
+     * portanto o shell do Terminal não deve separar nem redirecionar aqui. */
+    if (t->tatu) {
+        if (!tatu_shell_feed(t->tatu, line)) { tatu_shell_free(t->tatu); t->tatu = NULL; }
+        return;
+    }
     char *argv[16];
     int argc = 0;
     char *redirect = NULL;
@@ -427,7 +437,24 @@ static void run(term_t *t, char *line) {
     if (!argc) return;
     char *cmd = argv[0];
 
-    if (!strcmp(cmd, "ajuda") || !strcmp(cmd, "help")) help(t);
+    if (!strcmp(cmd, "tatu")) {
+        if (argc > 1 && !strcmp(argv[1], "teste")) {
+            tatu_selftest(lab_write, t);
+        } else {
+            char path[VFS_PATH_MAX];
+            const char *file = NULL;
+            if (argc > 1 && strcmp(argv[1], ":memory:")) { abs_path(t, argv[1], path, sizeof(path)); file = path; }
+            tatu_error_t err;
+            tatu_db_t *db = tatu_open(file, &err);
+            if (!db) printc(t, C_RED, "%s\n", err.rendered);
+            else {
+                t->tatu = tatu_shell_new(db, lab_write, t);
+                if (t->tatu) tatu_shell_banner(t->tatu);
+                else { tatu_close(db); printc(t, C_RED, "Memória insuficiente.\n"); }
+            }
+        }
+    }
+    else if (!strcmp(cmd, "ajuda") || !strcmp(cmd, "help")) help(t);
     else if (!strcmp(cmd, "clear") || !strcmp(cmd, "cls") || !strcmp(cmd, "limpar")) { t->count = 0; t->first = 0; }
     else if (!strcmp(cmd, "ls") || !strcmp(cmd, "dir")) cmd_ls(t, argc, argv);
     else if (!strcmp(cmd, "pwd")) { char p[VFS_PATH_MAX]; vfs_path(t->cwd, p, sizeof(p)); print(t, "%s\n", p); }
@@ -682,7 +709,7 @@ static void key(term_t *t, event_t *e) {
     t->cursor_on = true;
     if ((e->mods & MOD_CTRL) && e->key == KEY_CHAR) {
         uint32_t c = tolower((int)e->ch);
-        if (c == 'c') { put(t, t->input, C_WHITE); put(t, "^C\n", C_DIM); t->in_len = t->in_cur = 0; t->input[0] = 0; prompt(t); }
+        if (c == 'c') { put(t, t->input, C_WHITE); put(t, "^C\n", C_DIM); t->in_len = t->in_cur = 0; t->input[0] = 0; if (t->tatu) tatu_shell_cancel(t->tatu); prompt(t); }
         else if (c == 'l') { t->count = 0; t->first = 0; prompt(t); }
         else if (c == 'v') {
             int n;
@@ -786,6 +813,7 @@ void terminal_main(void *arg) {
         if (!t->quit) draw(t);
     }
     win_destroy(t->win);
+    tatu_shell_free(t->tatu);
     kfree(t->lines);
     kfree(t);
 }

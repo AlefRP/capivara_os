@@ -36,7 +36,11 @@ da capivara › Bloquear.
 dele para a frente. A Lixeira fica no fim.
 
 **Área de trabalho.** O disco "Capivara HD" e os arquivos da pasta
-`~/Área de Trabalho` aparecem à direita. Clique duas vezes para abrir.
+`~/Área de Trabalho` aparecem à direita. Clique duas vezes para abrir. Um
+arquivo `.app` é um **atalho**: guarda o id de um aplicativo (o mesmo do
+comando `abrir`), aparece com o ícone do app e o abre no clique duplo. Por
+exemplo, no Terminal, `cd "Área de Trabalho"` e depois
+`echo calc > Calculadora.app` criam um atalho para a Calculadora.
 
 ## 🪟 Janelas
 
@@ -108,6 +112,7 @@ Fotos.
 |:-:|---|---|
 | <img src="img/icones/explorador.png" width="32" alt=""> | Explorador | Delete manda para a Lixeira; Shift+Delete apaga de vez. O menu Exibir mostra os arquivos ocultos |
 | <img src="img/icones/terminal.png" width="32" alt=""> | Terminal | veja a lista de comandos abaixo. Setas ↑/↓ percorrem o histórico |
+| <img src="img/icones/toca.png" width="32" alt=""> | Toca · Tatu DB | cliente SQL com editor, navegador de tabelas e grade; Ctrl+Enter executa. [Guia do banco](tatu.md) |
 | <img src="img/icones/bloco-de-notas.png" width="32" alt=""> | Bloco de Notas | Ctrl+S salva, Ctrl+O abre, Ctrl+N cria um arquivo novo |
 | <img src="img/icones/calculadora.png" width="32" alt=""> | Calculadora | aceita o teclado numérico e as teclas + − * / Enter |
 | <img src="img/icones/paint.png" width="32" alt=""> | Paint | salva e abre imagens BMP |
@@ -145,6 +150,7 @@ Digite `ajuda` para ver a lista. Também existe o redirecionamento `>`, como em
 | `history`, `clear` | comandos anteriores / limpa a tela |
 | `teclado [abnt2\|us]` | mostra ou troca o layout do teclado |
 | `tema [claro\|escuro]` | mostra ou troca o tema |
+| `tatu [arquivo\|teste]` | abre o shell SQL do Tatu DB ou roda seus testes; `.quit` volta ao Terminal ([guia](tatu.md)) |
 | `som [teste\|volume N]` | mostra a placa de som, toca dó-mi-sol ou muda o volume (0 a 100) |
 | `notificar <texto>` | mostra uma notificação |
 | `captura` | salva a tela em Imagens |

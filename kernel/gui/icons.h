@@ -34,6 +34,7 @@ enum {
     ICON_DISK,
     ICON_GAME,          /* controle de videogame: jogos */
     ICON_BOOK,          /* livro aberto: app Estudos */
+    ICON_TATU,          /* tatu sobre camadas de dados: cliente Toca */
     ICON_COUNT,
 };
 
@@ -45,6 +46,16 @@ enum {
     GLYPH_SAVE, GLYPH_OPEN, GLYPH_LOCK, GLYPH_SPEAKER, GLYPH_NETWORK, GLYPH_CHEVRON_UP,
     GLYPH_TASKVIEW, GLYPH_LOGO, GLYPH_BELL, GLYPH_ZOOM_IN, GLYPH_ZOOM_OUT, GLYPH_RESTORE, GLYPH_CLOSE,
 };
+
+/* Ícone feito de uma imagem, para os programas extras (docs/extras.md). Os
+ * ícones do sistema são desenhados em código, mas um extra pode trazer a
+ * arte dele: uma imagem quadrada, ARGB de 32 bits (sem pré-multiplicar). */
+typedef struct icon_image {
+    int size;
+    const uint32_t *argb;
+} icon_image_t;
+#define ICON_IMAGE_BASE 1000
+int icon_from_image(const icon_image_t *img);   /* um id de ícone novo (ICON_FILE se não couber) */
 
 struct canvas;
 void icon_draw(struct canvas *c, int icon, int x, int y, int size);

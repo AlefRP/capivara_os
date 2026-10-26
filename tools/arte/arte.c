@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         { "calculadora", ICON_CALC }, { "paint", ICON_PAINT }, { "fotos", ICON_PHOTOS },
         { "captura", ICON_SNIP }, { "gerenciador", ICON_TASKMGR }, { "configuracoes", ICON_SETTINGS },
         { "launchpad", ICON_LAUNCHPAD }, { "lixeira", ICON_TRASH }, { "disco", ICON_DISK },
-        { "pasta", ICON_FOLDER }, { "jogo", ICON_GAME }, { "estudos", ICON_BOOK },
+        { "pasta", ICON_FOLDER }, { "jogo", ICON_GAME }, { "estudos", ICON_BOOK }, { "toca", ICON_TATU },
     };
     for (size_t i = 0; i < sizeof(apps) / sizeof(apps[0]); i++) icon(apps[i].name, apps[i].id, 128);
     return 0;

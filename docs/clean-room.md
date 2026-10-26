@@ -34,3 +34,11 @@ implementação original. O trabalho é dividido em duas etapas que não se mist
   embutir fontes / SIL OFL 1.1) — veja `kernel/gui/font/LEIA-ME.md`
 
 Todo o resto (kernel, drivers, interface gráfica, aplicativos) é código próprio.
+
+## Tatu DB, do mesmo autor
+
+O motor SQL em `kernel/tatu/` é um port autorizado do Tatu DB, outro projeto
+do autor do Capivara. O código Python foi consultado para preservar a semântica
+SQL e o formato JSON; essa parte não é uma reimplementação *clean room* de
+terceiros. A versão nativa usa somente os recursos do Capivara e não incorpora
+o interpretador Python. O cliente Toca e seu ícone são próprios.
