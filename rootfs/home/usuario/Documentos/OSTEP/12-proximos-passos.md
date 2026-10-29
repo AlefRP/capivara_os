@@ -33,8 +33,14 @@ Cada um é um trabalho de várias semanas e liga vários capítulos do livro.
   `syscall`, um carregador de ELF e uma libc mínima.
 - **Prioridades no escalonador** (cap. 8): um campo de prioridade em `task_t`,
   uma fila por nível e o boost.
-- **Semáforos e join** (caps. 27, 30 e 31): `sem_wait`, `sem_post` e um
-  `task_join` que bloqueia em vez de fazer *polling*.
+- **Variáveis de condição** (cap. 30): criar uma API geral de espera e
+  sinalização e uma terceira versão do produtor/consumidor. Semáforos e
+  `task_join` já estão no laboratório `prodcons`.
+- **Consistência após falhas** (caps. 40 e 42): simular um dispositivo de
+  blocos, manter seus blocos ao descartar o cache e interromper a execução
+  entre escritas. Comparar o estado recuperado com e sem diário. Os dados
+  permaneceriam em RAM no sistema real; o experimento estudaria uma queda
+  simulada, separada do rollback em memória do Tatu DB.
 - **Disco** (caps. 37, 39 e 40): driver ATA ou AHCI e um sistema de arquivos
   simples, FAT32 ou um *vsfs* próprio.
 - **Journaling** (cap. 42): um diário de metadados no sistema de arquivos novo.

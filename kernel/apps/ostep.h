@@ -18,3 +18,5 @@ typedef struct {
 
 /* Roda o laboratório argv[0]; devolve false se não for um deles. */
 bool lab_run(lab_out_t *o, int argc, char **argv);
+/* Regressões determinísticas das primitivas reais de semáforo e join. */
+void lab_sync_test(lab_out_t *o);

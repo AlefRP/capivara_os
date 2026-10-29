@@ -15,6 +15,8 @@ typedef enum {
 
 #define EVQ_SIZE 128
 
+typedef struct semaphore sem_t;
+
 typedef struct task {
     int id;
     char name[32];
@@ -30,6 +32,15 @@ typedef struct task {
     uint32_t cpu_percent;      /* uso de CPU no último segundo */
     uint64_t started_at;
     uint64_t runs;             /* quantas vezes o escalonador a pôs na CPU */
+    uint64_t yields, blocks;   /* cessões voluntárias / entradas em TASK_BLOCKED */
+    uint64_t finished_at;
+
+    /* Esperas protegidas por irq_save; cada tarefa espera uma coisa por vez. */
+    sem_t *waiting_sem;
+    struct task *sem_next;
+    bool sem_granted;         /* crédito entregue por post, ainda não consumido */
+    bool joinable;            /* conserva a tarefa morta até join ou detach */
+    struct task *joiner, *join_target;
 
     /* fila de eventos */
     event_t evq[EVQ_SIZE];
@@ -55,7 +66,8 @@ typedef struct {
     char name[32];
     task_state_t state;
     uint32_t cpu_percent;
-    uint64_t cpu_ms, started_at, stack_size, mem_bytes, runs;
+    uint64_t cpu_ms, started_at, finished_at, stack_size, mem_bytes, runs;
+    uint64_t yields, blocks;
     bool system;
 } task_info_t;
 
@@ -67,6 +79,15 @@ void    sched_stats(sched_stats_t *out);
 
 void    sched_init(void);
 task_t *task_create(const char *name, task_entry_t entry, void *arg);
+task_t *task_create_joinable(const char *name, task_entry_t entry, void *arg);
+/* Um único joiner; sucesso copia as métricas finais e consome o ponteiro.
+ * NULL em info descarta as métricas. Falha para alvo inválido, já reclamado,
+ * detached, para a própria tarefa ou para um ciclo de joins. Se o joiner
+ * morrer, o alvo continua disponível para outro join/detach. */
+bool    task_join(task_t *target, task_info_t *info);
+/* Desiste de join; o reap automático passa a recolher a tarefa ao terminar.
+ * Falha se outro joiner já a reclamou. Também consome o ponteiro do chamador. */
+bool    task_detach(task_t *target);
 task_t *task_current(void);
 task_t *task_find(int id);
 int     task_list(task_t **out, int max);   /* ponteiros: só com interrupções desligadas */
@@ -93,3 +114,11 @@ regs_t *sched_switch(regs_t *current);
 typedef struct { volatile int locked; task_t *owner; } mutex_t;
 void mutex_lock(mutex_t *m);
 void mutex_unlock(mutex_t *m);
+
+/* Semáforo contável, só em contexto de tarefa. count nunca fica negativo:
+ * post entrega diretamente ao primeiro da fila ou aumenta os créditos livres.
+ * Inicialize antes de compartilhar e mantenha vivo até terminarem as esperas. */
+struct semaphore { uint64_t count; task_t *head, *tail; };
+void sem_init(sem_t *s, uint64_t count);
+void sem_wait(sem_t *s);
+void sem_post(sem_t *s);

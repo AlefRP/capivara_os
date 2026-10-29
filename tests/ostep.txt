@@ -70,6 +70,22 @@ type stat Documentos/Bem-vindo.txt
 key ret
 sleep 1
 shot 08-corrida-disco-stat
+
+# Produtor/consumidor: a mensagem OK exige IDs únicos, totais corretos,
+# respeito à capacidade e fila vazia; a captura permite comparar as métricas.
+type clear
+key ret
+type prodcons polling p=2 c=2 b=4 n=20 atraso=1
+key ret
+waitlog prodcons: OK modo=polling p=2 c=2 b=4 n=20 atraso=1 total=40
+shot 08a-prodcons-polling
+type clear
+key ret
+type prodcons semaforo p=2 c=2 b=4 n=20 atraso=1
+key ret
+waitlog prodcons: OK modo=semaforo p=2 c=2 b=4 n=20 atraso=1 total=40
+shot 08b-prodcons-semaforo
+
 # O guia (app Estudos): abre pela pesquisa, maximiza e troca de capítulo
 key meta_l-spc
 sleep 1

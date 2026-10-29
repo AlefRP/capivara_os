@@ -113,7 +113,7 @@ jobs:
           sh tools/tatu/test-host.sh
           sh tools/tatu/test-storage.sh
           sh tools/tatu/test-oom.sh
-          for roteiro in gui recursos terminal ostep tatu toca-ui; do
+          for roteiro in gui recursos terminal ostep prodcons tatu toca-ui; do
             echo "::group::tests/$roteiro.txt"
             python3 tools/qemu-test.py tests/$roteiro.txt --out build/test/$roteiro
             echo "::endgroup::"

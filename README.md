@@ -58,7 +58,7 @@ O código em C e assembly é comentado em português.
 |:-:|---|---|
 | <img src="docs/img/icones/explorador.png" width="40" alt=""> | **Explorador de Arquivos** | navega nas pastas, cria, renomeia, copia e apaga; Lixeira e arquivos ocultos |
 | <img src="docs/img/icones/terminal.png" width="40" alt=""> | **Terminal** | uns 45 comandos: `ls`, `cd`, `cat`, `tree`, `ps`, `kill`, `sysinfo`, `dmesg`, `som`, os laboratórios do OSTEP... |
-| <img src="docs/img/icones/estudos.png" width="40" alt=""> | **Estudos** | guia para estudar o livro [OSTEP](docs/ostep.md) com o Capivara: capítulo por capítulo, com o código e experimentos |
+| <img src="docs/img/icones/estudos.png" width="40" alt=""> | **Estudos** | guia para estudar o livro [OSTEP](docs/ostep.md) com o Capivara: capítulos, código e experimentos, incluindo produtores/consumidores com métricas e verificação de integridade |
 | <img src="docs/img/icones/toca.png" width="40" alt=""> | **Toca · Tatu DB** | [cliente SQL próprio](docs/tatu.md), com editor, tabelas, grade de resultados e transações; arquivos em RAM |
 | <img src="docs/img/icones/bloco-de-notas.png" width="40" alt=""> | **Bloco de Notas** | editor de texto UTF-8, com abrir e salvar |
 | <img src="docs/img/icones/calculadora.png" width="40" alt=""> | **Calculadora** | calculadora padrão, com vírgula decimal |
@@ -77,7 +77,7 @@ O código em C e assembly é comentado em português.
 | 🥾 Boot | GRUB 2 (BIOS e UEFI), Multiboot2, modo longo de 64 bits, kernel na metade superior |
 | 🧠 Memória | alocador físico (bitmap), paginação de 4 níveis, *physmap*, heap `kmalloc` |
 | ⚙️ CPU | GDT/TSS, IDT, exceções com tela de erro e pilha de chamadas, SSE com FXSAVE por tarefa |
-| 🔀 Tarefas | escalonador preemptivo round-robin (1 kHz), sleep, mutex, filas de eventos, finalizar tarefa |
+| 🔀 Tarefas | escalonador preemptivo round-robin (1 kHz), sleep, mutex, semáforos bloqueantes, join, filas de eventos, finalizar tarefa |
 | 🔌 Drivers | serial, PIT, PIC, PS/2 (teclado ABNT2/EUA com acentos, mouse com roda), RTC, PCI, ACPI (desligar), reiniciar, som AC'97 (48 kHz por DMA) |
 | 🖥️ Máquinas virtuais | mouse absoluto no QEMU (vmmouse) e no VirtualBox (VMMDev), sem precisar "capturar" o cursor |
 | 📁 Arquivos | ramfs com pastas e arquivos, initrd em tar carregado pelo GRUB, Lixeira com restauração, imagens BMP |

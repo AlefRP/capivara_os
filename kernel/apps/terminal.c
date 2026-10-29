@@ -390,6 +390,7 @@ static void help(term_t *t) {
         { "tema [claro|escuro]", "mostra/troca o tema" },
         { "som [teste|volume N]", "placa de som: testa ou muda o volume" },
         { "ostep", "laboratórios do livro OSTEP (escalonar, heap...)" },
+        { "prodcons <modo> ...", "produtor/consumidor: polling ou semaforo (OSTEP)" },
         { "tatu [arquivo|teste]", "banco SQL do Tatu DB (.help para ajuda)" },
         { "notificar <texto>", "mostra uma notificação" }, { "captura", "salva a tela em Imagens" },
         { "lixeira [esvaziar]", "lista ou esvazia a Lixeira" }, { "bloquear", "tela de bloqueio" },

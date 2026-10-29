@@ -57,17 +57,22 @@ espera ela terminar, `pthread_mutex_lock` e `unlock` fazem a exclusão mútua, e
 **No Capivara.** Os equivalentes:
 
 - `task_create(nome, função, argumento)` cria;
-- não há `join`: o `corrida` espera as duas tarefas com um contador
-  `done`, somado com uma instrução atômica (`__atomic_add_fetch`), e
-  `task_sleep(5)` entre uma olhada e outra;
+- `task_create_joinable` cria uma tarefa cujo término pode ser aguardado por
+  `task_join`; ela conserva o estado final até que ele seja recolhido;
+- `task_join(tarefa, info)` bloqueia quem espera e devolve uma cópia das
+  métricas finais. O laboratório `prodcons` usa essa API;
+- o `corrida` conserva a espera por um contador `done`, somado com uma
+  instrução atômica (`__atomic_add_fetch`), e `task_sleep(5)` entre consultas,
+  para comparar esse *polling* com o bloqueio do `prodcons`;
 - `mutex_lock` e `mutex_unlock` em `kernel/sched/task.c`;
 - para esperar uma condição, `task_block` e `task_wake` (cap. 30).
 
 **Para pensar.**
 
-- Esperar com `task_sleep(5)` num laço é *polling*. Como seria um `task_join`
-  que bloqueia a tarefa até a outra terminar? Onde você acordaria quem espera?
-  (Dica: `task_exit`.)
+- Esperar com `task_sleep(5)` num laço é *polling*. Leia `task_join` e
+  `task_exit`: onde quem espera bloqueia, e onde é acordado?
+- Por que uma tarefa criada com `task_create_joinable` precisa preservar o
+  estado depois de terminar, mesmo que `task_join` ainda não tenha sido chamado?
 
 ## Cap. 28 · Locks
 

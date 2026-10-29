@@ -5,7 +5,7 @@
  *
  *   no sistema de verdade:  trocas (troca de contexto), traduzir (tabelas de
  *                           página), heap (espaço livre), corrida (locks),
- *                           stat (arquivos)
+ *                           stat (arquivos), prodcons (sincronização)
  *   em simuladores:         escalonar (políticas de CPU), paginas
  *                           (substituição de páginas), disco (braço do disco)
  *
@@ -26,6 +26,7 @@
 #include "arch/x86_64/pit.h"
 #include "lib/string.h"
 #include "lib/printf.h"
+#include "panic.h"
 
 #define ABS_DIFF(a, b) ((a) > (b) ? (a) - (b) : (b) - (a))
 
@@ -750,6 +751,227 @@ static void lab_corrida(int argc, char **argv) {
 }
 
 /* ================================================================== */
+/* prodcons: fila limitada, semáforos e join (caps. 27, 30 e 31)        */
+/* ================================================================== */
+#define PC_WORKERS 4
+#define PC_BUFFER  64
+#define PC_END     (-1)
+
+typedef struct pc_run pc_run_t;
+typedef struct {
+    pc_run_t *run;
+    task_t *task;
+    int index;
+    bool producer;
+    uint64_t retries;
+    uint64_t cpu0, runs0, yields0, blocks0;
+    task_info_t final;
+} pc_worker_t;
+
+struct pc_run {
+    bool blocking, abort;
+    int producers, consumers, capacity, each, delay, total;
+    int ring[PC_BUFFER], head, count, peak;
+    int produced, consumed, duplicates, invalid;
+    uint8_t *seen;
+    mutex_t queue_lock;
+    sem_t slots, items, start;
+    pc_worker_t workers[PC_WORKERS * 2];
+};
+
+/* A saída pertence a ESTA invocação: outro Terminal pode executar um lab
+ * enquanto este bloqueia. Os trabalhadores nunca desenham nem usam `out`. */
+static void pc_print(lab_out_t *o, int color, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+static void pc_print(lab_out_t *o, int color, const char *fmt, ...) {
+    char buf[600];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    o->write(o->ctx, color, buf);
+}
+
+/* Nos dois modos o mutex protege a mesma fila. Só a maneira de esperar por
+ * espaço/dados muda: consultar e ceder a CPU, ou dormir num semáforo. */
+static void pc_put(pc_run_t *r, pc_worker_t *w, int item) {
+    if (r->blocking) {
+        sem_wait(&r->slots);
+    }
+    for (;;) {
+        mutex_lock(&r->queue_lock);
+        if (r->blocking) ASSERT(r->count < r->capacity);
+        if (r->count < r->capacity) {
+            r->ring[(r->head + r->count) % r->capacity] = item;
+            r->count++;
+            if (r->count > r->peak) r->peak = r->count;
+            if (item != PC_END) r->produced++;
+            mutex_unlock(&r->queue_lock);
+            if (r->blocking) sem_post(&r->items);
+            return;
+        }
+        mutex_unlock(&r->queue_lock);
+        if (w) w->retries++;
+        task_yield();
+    }
+}
+
+static int pc_get(pc_run_t *r, pc_worker_t *w) {
+    if (r->blocking) {
+        sem_wait(&r->items);
+    }
+    for (;;) {
+        mutex_lock(&r->queue_lock);
+        if (r->blocking) ASSERT(r->count > 0);
+        if (r->count) {
+            int item = r->ring[r->head];
+            r->head = (r->head + 1) % r->capacity;
+            r->count--;
+            if (item != PC_END) {
+                r->consumed++;
+                if (item < 0 || item >= r->total) r->invalid++;
+                else if (r->seen[item]) r->duplicates++;
+                else r->seen[item] = 1;
+            }
+            mutex_unlock(&r->queue_lock);
+            if (r->blocking) sem_post(&r->slots);
+            return item;
+        }
+        mutex_unlock(&r->queue_lock);
+        w->retries++;
+        task_yield();
+    }
+}
+
+static void pc_worker(void *arg) {
+    pc_worker_t *w = arg;
+    pc_run_t *r = w->run;
+    sem_wait(&r->start);
+    if (r->abort) return;      /* criação parcial: todos saem antes de usar a fila */
+    uint64_t f = irq_save();
+    task_t *self = task_current();
+    w->cpu0 = self->cpu_ticks;
+    w->runs0 = self->runs;
+    w->yields0 = self->yields;
+    w->blocks0 = self->blocks;
+    irq_restore(f);
+    if (w->producer) {
+        for (int i = 0; i < r->each; i++) {
+            if (r->delay) task_sleep((uint64_t)r->delay);
+            pc_put(r, w, w->index * r->each + i);
+        }
+    } else {
+        while (pc_get(r, w) != PC_END) { }
+    }
+}
+
+static void pc_usage(lab_out_t *o) {
+    pc_print(o, LAB_TEXT, "uso: prodcons <polling|semaforo> [p=N] [c=N] [b=N] [n=N] [atraso=N]\n");
+    pc_print(o, LAB_DIM, "  p/c: 1..4; buffer b: 1..64; n: 1..10000 itens por produtor; atraso: 0..20 ms\n");
+    pc_print(o, LAB_DIM, "  padrão: p=2 c=2 b=4 n=40 atraso=1; fila protegida por mutex nos dois modos\n");
+    pc_print(o, LAB_DIM, "  prodcons teste: regressões das primitivas reais de semáforo e join\n");
+}
+
+static void lab_prodcons(lab_out_t *o, int argc, char **argv) {
+    if (argc == 2 && !strcmp(argv[1], "teste")) { lab_sync_test(o); return; }
+    if (argc < 2 || (strcmp(argv[1], "polling") && strcmp(argv[1], "semaforo"))) {
+        pc_usage(o);
+        return;
+    }
+    long p = 2, c = 2, b = 4, n = 40, delay = 1;
+    for (int i = 2; i < argc; i++) {
+        if (!option(argv[i], "p", &p) && !option(argv[i], "c", &c) &&
+            !option(argv[i], "b", &b) && !option(argv[i], "n", &n) &&
+            !option(argv[i], "atraso", &delay)) {
+            pc_usage(o);
+            return;
+        }
+    }
+    if (p < 1 || p > PC_WORKERS || c < 1 || c > PC_WORKERS || b < 1 || b > PC_BUFFER ||
+        n < 1 || n > 10000 || delay < 0 || delay > 20) {
+        pc_usage(o);
+        return;
+    }
+    /* O dono mantém os dados vivos mesmo se pedirem para finalizar o Terminal.
+     * Este mutex privado nunca é adquirido pelos trabalhadores. */
+    mutex_t lifetime = {0};
+    mutex_lock(&lifetime);
+    pc_run_t *r = kcalloc(1, sizeof(*r));
+    if (!r) { pc_print(o, LAB_RED, "prodcons: sem memória\n"); mutex_unlock(&lifetime); return; }
+    r->seen = kcalloc((size_t)(p * n), 1);
+    if (!r->seen) { kfree(r); pc_print(o, LAB_RED, "prodcons: sem memória\n"); mutex_unlock(&lifetime); return; }
+    r->blocking = !strcmp(argv[1], "semaforo");
+    r->producers = (int)p; r->consumers = (int)c; r->capacity = (int)b;
+    r->each = (int)n; r->delay = (int)delay; r->total = (int)(p * n);
+    sem_init(&r->slots, (uint64_t)b);
+    sem_init(&r->items, 0);
+    sem_init(&r->start, 0);
+
+    pc_print(o, LAB_YELLOW, "Produtores/consumidores: %s, p=%ld c=%ld b=%ld n=%ld atraso=%ld ms\n",
+             argv[1], p, c, b, n, delay);
+    pc_print(o, LAB_DIM, "Esperado: %d IDs, cada um consumido uma vez; fila vazia ao terminar.\n", r->total);
+    int created = 0;
+    for (int i = 0; i < p + c; i++) {
+        pc_worker_t *w = &r->workers[i];
+        w->run = r; w->producer = i < p; w->index = i < p ? i : i - (int)p;
+        char name[32];
+        snprintf(name, sizeof(name), "prodcons %s %d", w->producer ? "P" : "C", w->index + 1);
+        /* Até poderem executar, já estarão protegidos contra kill. Finalizar
+         * um só deixaria os colegas esperando itens que nunca chegariam. */
+        uint64_t f = irq_save();
+        w->task = task_create_joinable(name, pc_worker, w);
+        if (w->task) w->task->system = true;
+        irq_restore(f);
+        if (!w->task) { r->abort = true; break; }
+        created++;
+    }
+    uint64_t start = timer_ms();
+    for (int i = 0; i < created; i++) sem_post(&r->start);
+    bool joined = true;
+    /* Primeiro todos os produtores. Só depois vêm os sentinelas: nenhum
+     * consumidor sai enquanto ainda pode chegar um item de trabalho. */
+    for (int i = 0; i < created && i < p; i++)
+        if (!task_join(r->workers[i].task, &r->workers[i].final)) joined = false;
+    if (!r->abort)
+        for (int i = 0; i < c; i++) pc_put(r, NULL, PC_END);
+    for (int i = (int)p; i < created; i++)
+        if (!task_join(r->workers[i].task, &r->workers[i].final)) joined = false;
+
+    int missing = 0;
+    for (int i = 0; i < r->total; i++) if (!r->seen[i]) missing++;
+    bool ok = joined && !r->abort && !missing && !r->duplicates && !r->invalid && !r->count &&
+              r->produced == r->total && r->consumed == r->total && r->peak <= r->capacity;
+    if (r->abort) pc_print(o, LAB_RED, "Não foi possível criar todas as tarefas; experiência cancelada.\n");
+    pc_print(o, LAB_TEXT, "  produzidos: %d; consumidos: %d; ausentes: %d; duplicados: %d; inválidos: %d\n",
+             r->produced, r->consumed, missing, r->duplicates, r->invalid);
+    pc_print(o, LAB_TEXT, "  fila final: %d; pico: %d/%d; tempo: %lu ms\n",
+             r->count, r->peak, r->capacity, timer_ms() - start);
+    pc_print(o, LAB_DIM, "  tarefa    CPU(ms)    entradas     yields   bloqueios   consultas vazias\n");
+    uint64_t cpu = 0, runs = 0, yields = 0, blocks = 0, retries = 0;
+    for (int i = 0; i < created; i++) {
+        pc_worker_t *w = &r->workers[i];
+        if (r->abort) continue;
+        pc_print(o, LAB_TEXT, "  %s%d    %9lu %11lu %10lu %11lu %17lu\n",
+                 w->producer ? "P" : "C", w->index + 1, w->final.cpu_ms - w->cpu0,
+                 w->final.runs - w->runs0 + 1, w->final.yields - w->yields0,
+                 w->final.blocks - w->blocks0, w->retries);
+        cpu += w->final.cpu_ms - w->cpu0;
+        runs += w->final.runs - w->runs0 + 1;
+        yields += w->final.yields - w->yields0;
+        blocks += w->final.blocks - w->blocks0;
+        retries += w->retries;
+    }
+    pc_print(o, LAB_TEXT, "  total %9lu %11lu %10lu %11lu %17lu\n", cpu, runs, yields, blocks, retries);
+    pc_print(o, LAB_DIM, "CPU: amostragem de 1 ms; 0 ms pode significar execução menor que um tick.\n");
+    pc_print(o, LAB_DIM, "Métricas dos trabalhadores, sem a barreira inicial; bloqueios não contam sleep.\n");
+    pc_print(o, ok ? LAB_GREEN : LAB_RED, "Verificação de integridade: %s\n", ok ? "OK" : "FALHOU");
+    kprintf("prodcons: %s modo=%s p=%d c=%d b=%d n=%d atraso=%d total=%d\n",
+            ok ? "OK" : "FALHOU", argv[1], r->producers, r->consumers, r->capacity, r->each, r->delay, r->total);
+    kfree(r->seen);
+    kfree(r);
+    mutex_unlock(&lifetime);
+}
+
+/* ================================================================== */
 /* stat: metadados de um arquivo (caps. 39 e 40)                       */
 /* ================================================================== */
 static void lab_stat(int argc, char **argv) {
@@ -786,6 +1008,7 @@ static void lab_index(void) {
         { "paginas <política> ...", "cap. 22", "FIFO, LRU, OPT, relógio; paginas belady" },
         { "Concorrência", NULL, NULL },
         { "corrida [trava] [N]", "caps. 26-28", "condição de corrida e o mutex" },
+        { "prodcons <modo> ...", "caps. 27-31", "fila limitada: polling ou semáforos, join e métricas" },
         { "Persistência", NULL, NULL },
         { "disco <política> ...", "cap. 37", "FIFO, SSTF, SCAN e C-SCAN" },
         { "stat <caminho>", "caps. 39-40", "metadados de um arquivo (o \"inode\")" },
@@ -806,6 +1029,7 @@ static void lab_index(void) {
 }
 
 bool lab_run(lab_out_t *o, int argc, char **argv) {
+    if (!strcmp(argv[0], "prodcons")) { lab_prodcons(o, argc, argv); return true; }
     out = o;
     const char *c = argv[0];
     if (!strcmp(c, "ostep")) lab_index();

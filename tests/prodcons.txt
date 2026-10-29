@@ -1,0 +1,61 @@
+# Sincronização real: primitivas, fila de tamanho 1, produtores/consumidores
+# assimétricos, atraso zero e execuções repetidas. Cada resultado esperado
+# inclui todos os parâmetros: waitlog não pode aceitar uma execução anterior.
+waitlog kmain: pronto
+sleep 4
+key ret
+sleep 3
+key alt-f4
+sleep 1
+key meta_l-t
+sleep 2.5
+key meta_l-up
+sleep 1
+
+type prodcons teste
+key ret
+waitlog sincronizacao: testes OK 10 60
+shot 01-primitivas
+
+type clear
+key ret
+type prodcons polling p=2 c=2 b=4 n=40 atraso=1
+key ret
+waitlog prodcons: OK modo=polling p=2 c=2 b=4 n=40 atraso=1 total=80
+shot 02-polling
+
+type clear
+key ret
+type prodcons semaforo p=2 c=2 b=4 n=40 atraso=1
+key ret
+waitlog prodcons: OK modo=semaforo p=2 c=2 b=4 n=40 atraso=1 total=80
+shot 03-semaforo
+
+# Capacidade mínima e múltiplos leitores/escritores nas duas formas de espera.
+type prodcons semaforo p=4 c=4 b=1 n=31 atraso=0
+key ret
+waitlog prodcons: OK modo=semaforo p=4 c=4 b=1 n=31 atraso=0 total=124
+type prodcons polling p=4 c=4 b=1 n=32 atraso=0
+key ret
+waitlog prodcons: OK modo=polling p=4 c=4 b=1 n=32 atraso=0 total=128
+
+# Mais consumidores que produtores e depois o inverso; nenhum item pode
+# sumir ou ser consumido duas vezes, inclusive na distribuição do término.
+type prodcons semaforo p=1 c=4 b=1 n=17 atraso=2
+key ret
+waitlog prodcons: OK modo=semaforo p=1 c=4 b=1 n=17 atraso=2 total=17
+type prodcons polling p=4 c=1 b=3 n=19 atraso=0
+key ret
+waitlog prodcons: OK modo=polling p=4 c=1 b=3 n=19 atraso=0 total=76
+
+# Buffer máximo, trabalho curto e repetição com parâmetros diferentes.
+type prodcons semaforo p=2 c=3 b=64 n=1 atraso=0
+key ret
+waitlog prodcons: OK modo=semaforo p=2 c=3 b=64 n=1 atraso=0 total=2
+type prodcons semaforo p=2 c=3 b=2 n=23 atraso=0
+key ret
+waitlog prodcons: OK modo=semaforo p=2 c=3 b=2 n=23 atraso=0 total=46
+type prodcons polling p=1 c=3 b=2 n=11 atraso=1
+key ret
+waitlog prodcons: OK modo=polling p=1 c=3 b=2 n=11 atraso=1 total=11
+shot 04-repeticao

@@ -31,6 +31,80 @@ static uint8_t fpu_template[512] __attribute__((aligned(16)));
 static void (*exit_hook)(task_t *t);
 static sched_stats_t counters;
 
+/* Compare o endereço na lista antes de acessar o nó. O chamador continua
+ * responsável por descartar um handle consumido por join/detach. */
+static bool registered(task_t *target) {
+    for (task_t *t = task_head; t; t = t->next)
+        if (t == target) return true;
+    return false;
+}
+
+/* Estas duas rotinas são chamadas com interrupções desligadas. Um crédito
+ * já concedido ainda pertence à espera até sem_wait voltar; se a tarefa for
+ * morta nesse intervalo, ele passa ao próximo em vez de desaparecer. */
+static void sem_release(sem_t *s) {
+    task_t *t = s->head;
+    if (t) {
+        s->head = t->sem_next;
+        if (!s->head) s->tail = NULL;
+        t->sem_next = NULL;
+        t->sem_granted = true;
+        task_wake(t);
+    } else {
+        ASSERT(s->count != UINT64_MAX);
+        s->count++;
+    }
+}
+
+static void cancel_wait(task_t *t) {
+    sem_t *s = t->waiting_sem;
+    if (s) {
+        bool granted = t->sem_granted;
+        if (!granted) {
+            task_t *prev = NULL, *p = s->head;
+            while (p && p != t) { prev = p; p = p->sem_next; }
+            if (p) {
+                if (prev) prev->sem_next = p->sem_next; else s->head = p->sem_next;
+                if (s->tail == p) s->tail = prev;
+            }
+        }
+        t->waiting_sem = NULL;
+        t->sem_next = NULL;
+        t->sem_granted = false;
+        if (granted) sem_release(s);
+    }
+    if (t->join_target) {
+        t->join_target->joiner = NULL;
+        t->join_target = NULL;
+    }
+}
+
+static void task_info(task_t *t, task_info_t *i) {
+    i->id = t->id;
+    memcpy(i->name, t->name, sizeof(i->name));
+    i->state = t->state;
+    i->cpu_percent = t->cpu_percent;
+    i->cpu_ms = t->cpu_ticks;
+    i->started_at = t->started_at;
+    i->finished_at = t->finished_at;
+    i->stack_size = t->stack_size;
+    i->mem_bytes = t->mem_bytes;
+    i->runs = t->runs;
+    i->yields = t->yields;
+    i->blocks = t->blocks;
+    i->system = t->system;
+}
+
+/* Nunca liberar a pilha corrente; join só chama isto para um alvo morto. */
+static void task_free(task_t *t) {
+    task_t **link = &task_head;
+    while (*link && *link != t) link = &(*link)->next;
+    if (*link) *link = t->next;
+    kfree(t->stack);
+    kfree(t->fpu);
+    kfree(t);
+}
+
 task_t *task_current(void) { return current; }
 
 void sched_stats(sched_stats_t *out) {
@@ -72,7 +146,7 @@ static void task_trampoline_exit(void) {
     task_exit();
 }
 
-task_t *task_create(const char *name, task_entry_t entry, void *arg) {
+static task_t *create(const char *name, task_entry_t entry, void *arg, bool joinable) {
     task_t *t = kcalloc(1, sizeof(task_t));
     if (!t) return NULL;
     t->stack = kmalloc(STACK_SIZE);
@@ -84,8 +158,11 @@ task_t *task_create(const char *name, task_entry_t entry, void *arg) {
     t->stack_size = STACK_SIZE;
     memcpy(t->fpu, fpu_template, 512);
     strlcpy(t->name, name, sizeof(t->name));
+    uint64_t f = irq_save();
     t->id = next_id++;
+    irq_restore(f);
     t->started_at = timer_ms();
+    t->joinable = joinable;
 
     /* Topo da pilha: endereço de retorno falso (se a função retornar, a tarefa
      * termina) e, abaixo dele, o regs_t que o iretq vai consumir. */
@@ -106,6 +183,47 @@ task_t *task_create(const char *name, task_entry_t entry, void *arg) {
     add_task(t);
     kprintf("tarefa %d criada: %s\n", t->id, t->name);
     return t;
+}
+
+task_t *task_create(const char *name, task_entry_t entry, void *arg) {
+    return create(name, entry, arg, false);
+}
+
+task_t *task_create_joinable(const char *name, task_entry_t entry, void *arg) {
+    return create(name, entry, arg, true);
+}
+
+bool task_join(task_t *target, task_info_t *info) {
+    uint64_t f = irq_save();
+    if (!registered(target) || target == current || !target->joinable || target->joiner) {
+        irq_restore(f);
+        return false;
+    }
+    /* Uma cadeia termina num alvo sem join_target; fechar um ciclo faria
+     * todos dormirem para sempre, então a última ligação é recusada. */
+    for (task_t *t = target; t; t = t->join_target) {
+        if (t == current) { irq_restore(f); return false; }
+    }
+    target->joiner = current;
+    current->join_target = target;
+    while (target->state != TASK_DEAD) {
+        current->state = TASK_BLOCKED;
+        task_yield();
+    }
+    if (info) task_info(target, info);
+    current->join_target = NULL;
+    target->joiner = NULL;
+    task_free(target);
+    irq_restore(f);
+    return true;
+}
+
+bool task_detach(task_t *target) {
+    uint64_t f = irq_save();
+    bool ok = registered(target) && target->joinable && !target->joiner;
+    if (ok) target->joinable = false;
+    irq_restore(f);
+    return ok;
 }
 
 task_t *task_find(int id) {
@@ -130,17 +248,7 @@ int task_snapshot(task_info_t *out, int max) {
     int n = 0;
     for (task_t *t = task_head; t && n < max; t = t->next) {
         if (t->state == TASK_DEAD) continue;
-        task_info_t *i = &out[n++];
-        i->id = t->id;
-        memcpy(i->name, t->name, sizeof(i->name));
-        i->state = t->state;
-        i->cpu_percent = t->cpu_percent;
-        i->cpu_ms = t->cpu_ticks;
-        i->started_at = t->started_at;
-        i->stack_size = t->stack_size;
-        i->mem_bytes = t->mem_bytes;
-        i->runs = t->runs;
-        i->system = t->system;
+        task_info(t, &out[n++]);
     }
     irq_restore(f);
     return n;
@@ -157,7 +265,11 @@ void task_account_memory(int task_id, int64_t delta) {
 }
 
 void task_yield(void) {
+    uint64_t f = irq_save();
+    if (current->state == TASK_RUNNING) current->yields++;
+    else if (current->state == TASK_BLOCKED) current->blocks++;
     __asm__ volatile("int $0x81" ::: "memory");
+    irq_restore(f);
 }
 
 void task_sleep(uint64_t ms) {
@@ -189,18 +301,25 @@ void task_exit(void) {
     kprintf("tarefa %d (%s) terminou\n", t->id, t->name);
     if (exit_hook) exit_hook(t);       /* fecha as janelas da tarefa */
     cli();
+    cancel_wait(t);
+    t->finished_at = timer_ms();
     t->state = TASK_DEAD;
+    if (t->joiner) task_wake(t->joiner);
     task_yield();
     panic("tarefa morta voltou a rodar");
 }
 
 bool task_kill(task_t *t) {
-    if (!t || t->system || t->state == TASK_DEAD) return false;
-    if (t == current) task_exit();
     uint64_t f = irq_save();
+    if (!registered(t) || t->system || t->state == TASK_DEAD) {
+        irq_restore(f);
+        return false;
+    }
+    if (t == current) { irq_restore(f); task_exit(); }
     t->kill_pending = true;
     if (t->state == TASK_BLOCKED || t->state == TASK_SLEEPING)
         t->state = TASK_READY;
+    resched = true;
     irq_restore(f);
     return true;
 }
@@ -209,6 +328,7 @@ bool task_kill(task_t *t) {
  * trocamos o contexto salvo dela por uma chamada a task_exit(). */
 static void apply_kill(task_t *t) {
     if (!t->kill_pending || t->lock_depth > 0) return;
+    cancel_wait(t);
     t->kill_pending = false;
     uint64_t top = ((uint64_t)t->stack + t->stack_size) & ~15ULL;
     uint64_t *ret = (uint64_t *)(top - 8);
@@ -229,7 +349,7 @@ static void reap(void) {
     task_t *prev = NULL, *t = task_head;
     while (t) {
         task_t *next = t->next;
-        if (t->state == TASK_DEAD && t != current) {
+        if (t->state == TASK_DEAD && t != current && !t->joinable) {
             if (prev) prev->next = next; else task_head = next;
             kfree(t->stack);
             kfree(t->fpu);
@@ -339,5 +459,44 @@ void mutex_unlock(mutex_t *m) {
     m->locked = 0;
     m->owner = NULL;
     current->lock_depth--;
+    irq_restore(f);
+}
+
+/* ---- semáforo bloqueante ---- */
+void sem_init(sem_t *s, uint64_t count) {
+    uint64_t f = irq_save();
+    s->count = count;
+    s->head = s->tail = NULL;
+    irq_restore(f);
+}
+
+void sem_wait(sem_t *s) {
+    uint64_t f = irq_save();
+    if (s->count) {
+        s->count--;
+        irq_restore(f);
+        return;
+    }
+    task_t *t = current;
+    ASSERT(!t->waiting_sem && !t->join_target);
+    t->waiting_sem = s;
+    t->sem_granted = false;
+    t->sem_next = NULL;
+    if (s->tail) s->tail->sem_next = t; else s->head = t;
+    s->tail = t;
+    /* Testar o crédito, entrar na fila e bloquear são uma só região atômica.
+     * Um wake genérico não concede crédito: o laço volta a dormir nesse caso. */
+    while (!t->sem_granted) {
+        t->state = TASK_BLOCKED;
+        task_yield();
+    }
+    t->waiting_sem = NULL;
+    t->sem_granted = false;
+    irq_restore(f);
+}
+
+void sem_post(sem_t *s) {
+    uint64_t f = irq_save();
+    sem_release(s);
     irq_restore(f);
 }

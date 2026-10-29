@@ -10,8 +10,9 @@ esperar, e confira a condição **num laço** (`while`, e não `if`), porque
 quando a thread acorda a condição pode já ter mudado. O exemplo central é o
 **produtor e consumidor** com um *buffer* limitado.
 
-**No Capivara.** `ev_wait` (`kernel/sched/event.c`) é exatamente esse padrão,
-com interrupções desligadas no lugar do lock:
+**No Capivara.** Ainda não há uma API geral de variáveis de condição.
+`ev_wait` (`kernel/sched/event.c`) aplica o padrão de conferir a condição e
+bloquear, com interrupções desligadas no lugar do lock:
 
 ```c
 for (;;) {
@@ -46,27 +47,88 @@ fila: um "acordar perdido".
 
 ## Cap. 31 · Semaphores
 
-**No livro.** O semáforo é um inteiro com duas operações: `wait` (diminui e,
-se ficou negativo, dorme) e `post` (aumenta e acorda alguém). Com valor
+**No livro.** Um modelo de semáforo usa um inteiro com duas operações:
+`wait` diminui e, se ficou negativo, dorme; `post` aumenta e acorda alguém.
+Nesse modelo, a contagem negativa representa tarefas esperando. Com valor
 inicial 1, ele é um lock; com 0, serve para esperar um evento; com N, conta
 recursos (como lugares livres num *buffer*). O capítulo resolve com ele o
 produtor e consumidor, o problema dos leitores e escritores e o jantar dos
 filósofos, e mostra que dá para construir semáforos com lock e variável de
 condição.
 
-**No Capivara.** Não há semáforos. Construir um é um bom exercício, com as
-peças que já existem:
+**No Capivara.** `sem_init`, `sem_wait` e `sem_post`, em
+`kernel/sched/task.c`, implementam semáforos para tarefas reais. Aqui o
+contador representa os recursos disponíveis e nunca fica negativo:
+`sem_wait` consome um recurso quando há algum; caso contrário, bloqueia a
+tarefa numa fila. Se há alguém esperando, `sem_post` entrega o recurso
+diretamente ao primeiro da fila e o acorda. Sem esperadores, aumenta a
+contagem disponível. Assim, uma tarefa nova não toma o recurso já entregue
+a quem foi acordado; a contagem pode continuar zero durante esse despertar.
+A contagem e a fila são protegidas por `irq_save`/`irq_restore`, numa CPU.
+Essa entrega de recurso difere da sinalização de uma variável de condição,
+na qual a tarefa acordada precisa reavaliar a condição num laço.
+Se uma tarefa for finalizada antes de concluir a espera, um recurso que já
+lhe tenha sido entregue é devolvido ao semáforo ou ao próximo esperador.
 
-- um contador e uma lista de tarefas esperando, dentro de uma estrutura;
-- `irq_save` e `irq_restore` para proteger os dois;
-- `task_block` para dormir e `task_wake` para acordar.
+O laboratório `prodcons` usa uma fila circular limitada. O semáforo de vagas
+começa em `b`; o de itens, em zero. Um produtor espera uma vaga, insere um
+item e publica um item disponível; um consumidor faz o caminho inverso.
+A alteração da fila também precisa de exclusão mútua: contar itens e vagas
+não protege sozinho a cabeça, a cauda e os dados do buffer.
+
+**Experimente.** Antes de rodar, calcule o total de itens: `p × n`.
+
+```sh
+prodcons polling p=2 c=2 b=4 n=40 atraso=1
+prodcons semaforo p=2 c=2 b=4 n=40 atraso=1
+```
+
+São dois produtores, dois consumidores, buffer de quatro posições e 40
+itens por produtor: 80 itens no total. O atraso é uma pausa de 1 ms dos
+produtores antes de publicar cada item. Em `polling`, a tarefa consulta a
+fila e chama
+`task_yield` enquanto espera; continua pronta para ser escalonada. Em
+`semaforo`, ela fica bloqueada até ser acordada. Os dois modos usam tarefas
+reais e protegem a fila. `task_join` aguarda o término dos trabalhadores.
+
+Confira que cada ID foi consumido uma vez, que os totais são 80, que a
+ocupação nunca ultrapassou quatro e que a fila terminou vazia. Compare
+tempo, CPU, vezes na CPU, yields, bloqueios e consultas sem progresso.
+CPU é uma estimativa por ticks de 1 ms; zero pode significar uma tarefa
+rápida demais para ser amostrada. Tempos e ordem de execução variam; a
+integridade deve permanecer correta.
+As métricas de CPU, yields e bloqueios somam os trabalhadores, excluindo a
+espera pela partida e a tarefa que coordena o laboratório.
+
+Repita mudando só `b=1`, depois a quantidade de trabalhadores e o atraso.
+Os limites são `p` e `c` de 1 a 4, `b` de 1 a 64, `n` de 1 a 10 000 itens
+por produtor e `atraso` de 0 a 20 ms. Sem opções, os valores são os do
+exemplo acima. O experimento roda com uma CPU e tarefas no anel 0.
+Os trabalhadores ficam protegidos contra finalização durante a execução.
+Um pedido para finalizar o Terminal espera o laboratório concluir e recolher
+as tarefas; matar só um trabalhador poderia deixar os outros sem progresso.
+
+Para verificar semáforos e join separadamente, rode:
+
+```sh
+prodcons teste
+```
+
+São dez regressões em `kernel/apps/ostep_sync.c`: conservação de créditos,
+esperas, cancelamento, ciclos de join e coleta de tarefas. O roteiro
+`tests/prodcons.txt` também exercita nove configurações da fila no QEMU e no
+CI. As verificações exigem correção; tempo e métricas de desempenho variam.
 
 **Para pensar.**
 
-- Escreva `sem_wait` e `sem_post` para o Capivara (em papel ou no código). Onde
-  pode acontecer um acordar perdido, e como o `irq_save` evita?
-- Com o seu semáforo, como o laboratório `corrida` poderia esperar as duas
-  tarefas sem *polling*?
+- Leia `sem_wait` e `sem_post`. Onde poderia acontecer um acordar perdido,
+  e como o trecho protegido evita que o recurso chegue antes do bloqueio?
+- Por que `sem_post` pode acordar uma tarefa mantendo a contagem em zero?
+  Como a entrega direta impede que outra tarefa tome esse recurso?
+- Com buffer de uma posição, o que impede dois produtores de sobrescrever
+  o mesmo item? Qual é o papel dos semáforos e qual é o da região crítica?
+- Por que terminar rápido e consumir o total certo ainda não basta para
+  provar que nenhum ID foi perdido ou duplicado?
 
 ## Cap. 32 · Common Concurrency Problems
 

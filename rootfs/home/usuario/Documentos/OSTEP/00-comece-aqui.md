@@ -21,6 +21,10 @@ próprio sistema.
    github.com/AlefRP/capivara_os, na pasta kernel.
 5. Responda o "Para pensar" com as suas palavras.
 
+Antes de rodar cada experimento, anote o resultado que espera obter. Depois
+compare a previsão com os números, confira as condições de correção e mude
+uma opção por vez. Repita: prever, executar, medir, explicar e alterar.
+
 ## O que o Capivara é, e o que ainda não é
 
 - Um kernel de 64 bits, monolítico, para **uma CPU**.
@@ -51,7 +55,7 @@ próprio sistema.
 - **08-concorrencia-e-locks**: caps. 26 a 29, threads, condição de corrida e
   locks. Laboratório: `corrida`.
 - **09-condicoes-e-eventos**: caps. 30 a 33, variáveis de condição, semáforos,
-  erros de concorrência e programação por eventos.
+  erros de concorrência e programação por eventos. Laboratório: `prodcons`.
 - **10-dispositivos-e-discos**: caps. 36 a 38, E/S, discos e RAID.
   Laboratórios: `som teste`, `disco`.
 - **11-arquivos**: caps. 39 a 45, arquivos, diretórios e como um sistema de
@@ -68,7 +72,8 @@ ostep
 ```
 
 Uns olham o sistema de verdade: `trocas` (troca de contexto), `traduzir`
-(tabelas de página), `heap` (espaço livre), `corrida` (locks) e `stat`
+(tabelas de página), `heap` (espaço livre), `corrida` (locks), `prodcons`
+(semáforos, espera e integridade de uma fila) e `stat`
 (arquivos). Outros são simuladores para o que o Capivara não tem:
 `escalonar`, `paginas` e `disco`. Os simuladores seguem as regras dos capítulos,
 passo a passo, para você conferir com as figuras do livro.

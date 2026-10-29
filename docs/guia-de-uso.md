@@ -171,8 +171,24 @@ lista; o que cada um ensina está em [Estudando o OSTEP](ostep.md).
 | `traduzir [endereço]` | o caminho de um endereço virtual pelas tabelas de página |
 | `paginas <política> [quadros] [refs]`, `paginas belady` | simula FIFO, LRU, OPT ou relógio |
 | `corrida [trava] [N]` | duas tarefas somam num contador, sem ou com mutex |
+| `prodcons <polling\|semaforo> [p=N] [c=N] [b=N] [n=N] [atraso=N]` | produtores e consumidores reais; compara espera por consultas com bloqueio, verifica os itens e mostra métricas |
+| `prodcons teste` | dez regressões das primitivas reais de semáforo e join, com verificações de créditos, cancelamento e coleta de tarefas |
 | `disco <política> [cabeça] [trilhas]` | simula FIFO, SSTF, SCAN ou C-SCAN |
 | `stat <caminho>` | os metadados de um arquivo ou pasta |
+
+No `prodcons`, `p` e `c` são produtores e consumidores (padrão 2, de 1 a 4),
+`b` é a capacidade da fila (padrão 4, de 1 a 64), `n` é a quantidade de itens
+**por produtor** (padrão 40, de 1 a 10 000) e `atraso` é a pausa antes de
+publicar cada item em ms (padrão 1, de 0 a 20). Compare `prodcons polling` e
+`prodcons semaforo`
+com as mesmas opções; o total esperado é `p × n`. O guia do OSTEP explica
+as verificações de integridade e as métricas de CPU e espera.
+Durante a execução, finalizar o Terminal fica adiado até o laboratório
+concluir; os trabalhadores ficam protegidos contra finalização parcial.
+
+`prodcons teste` verifica correção das primitivas; os cenários completos estão
+em [tests/prodcons.txt](../tests/prodcons.txt) e rodam no CI. Os testes exigem
+integridade e totais corretos; tempo, CPU e trocas podem variar entre execuções.
 
 ## ⌨️ Teclado
 
